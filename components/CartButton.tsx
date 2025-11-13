@@ -1,0 +1,22 @@
+import { images } from '@/constants';
+import React from 'react';
+import { Image, Text, TouchableOpacity, View } from 'react-native';
+
+const CartButton : ()=>Element = () => {
+    const totalItems = 10;
+  return (
+    <TouchableOpacity>
+        <Image source={images.bag} className='size-5' resizeMode ='contain'/>
+        {totalItems >> 0 && (
+            <View className='cart-badge'>
+                <Text>
+                    <Text className='small-bold text-white'>{totalItems}</Text>
+                </Text>
+            </View>
+        )}
+        <Text>Cart Button</Text>
+    </TouchableOpacity>
+  )
+}
+
+export default CartButton
