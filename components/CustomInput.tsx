@@ -16,7 +16,7 @@ const CustomInput = ({
     const [isFocused,setIsFocused] = useState(false);
     return(
         <View className='w-full'>
-            <Text className='label'>Custominput</Text>
+            <Text className='label'>{label}</Text>
             <TextInput
                 autoCapitalize="none"
                 autoCorrect={false}

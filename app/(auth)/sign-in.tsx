@@ -9,9 +9,11 @@ const SignIn = () => {
     const [form, setForm] = useState({ email: '', password: '' });
 
     const submit = async () => {
-      if (!form.email || form.password){
+      const {email, password} = form;
+
+      if (!email || !password) return
         Alert.alert('Error', 'Please enter the valid details');
-      }
+      
       setIsSubmitting(true)
       try{
         Alert.alert('success', 'Logged in successfully');
@@ -28,20 +30,25 @@ const SignIn = () => {
     <View className="gap-10 bg-white rounded-lg p-5 mt-5">
       <CustomInput
         placeholder="Enter your email"
-        value={''}
-        onChangeText={(text) => {}}
+        value={form.email}
+        onChangeText={(text) => setForm((prev) => ({ ...prev, email: text }))}
         label="Email"
         keyboardType="email-address"
       />
       <CustomInput
         placeholder="Enter your password"
-        value={''}
-        onChangeText={(text) => {}}
+        value={form.password}
+        onChangeText={(text) => setForm((prev) => ({ ...prev, password: text }))}
         label="password"
         secureTextEntry={true}
       />
 
-      <CustomButton title='Sign-In' />
+      <CustomButton title='Sign-In'
+      isLoading={isSubmitting}
+      onPress={submit}
+      
+      />
+
       <View className='flex justify-center mt-5 flex-row gap-2'>
         <Text className="base-regular text-gray-100">  Don't have an account ?</Text>
         <Link href="/sign-up" className='base-bold text-primary'>
