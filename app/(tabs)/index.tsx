@@ -1,13 +1,16 @@
+import CartButton from "@/components/CartButton";
+import { images, offers } from "@/constants";
+import useAuthStore from "@/store/auth.store";
 import cn from 'clsx';
 import { Fragment } from "react";
 import { FlatList, Image, Pressable, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import CartButton from "@/components/CartButton";
-import { images, offers } from "@/constants";
-
 
 export default function Index() {
+
+    const {user} = useAuthStore();
+    console.log('Authenticated user:', user);
   
 
   return (
@@ -61,6 +64,7 @@ export default function Index() {
                       <CartButton />
                   </View>
               )}
+              
           />
       </SafeAreaView>
   );
