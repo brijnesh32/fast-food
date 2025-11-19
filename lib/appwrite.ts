@@ -1,12 +1,19 @@
-import { CreateUserParams, SignInParams } from "@/type";
-import { Account, Avatars, Client, Databases, ID, Query } from "react-native-appwrite";
+import { CreateUserParams, GetMenuParams, SignInParams } from "@/type";
+import { Account, Avatars, Client, Databases, ID, Query, Storage } from "react-native-appwrite";
 
 export const appwriteConfig = {
     endpoint:process.env. EXPO_PUBLIC_APPWRITE_ENDPOINT!,
     Platform:"com.sarav.fastfoood",
     projectId:process.env. EXPO_PUBLIC_APPWRITE_PROJECT_ID!,
     databaseId: '69163419000ffda2b637',
-    userCollectionId: "user"
+    bucketId: '691cc560003016e1c2be',
+    userCollectionId: "user",
+    categoriesCollectionId: "categories",
+    menuCollectionId: "menu",
+    customizationsCollectionId: "customization",
+    menuCustomizationsCollectionId: "menu_customizations",
+
+
 }
 
 export const client = new Client()
@@ -17,6 +24,7 @@ client
 
     export const account = new Account(client);
     export const databases = new Databases (client);
+    export const storage = new Storage (client);
     const avatars = new Avatars (client);
 
 export const createUser = async ({ email, password, name }: CreateUserParams) => {
@@ -63,6 +71,37 @@ export const getCurrentUser = async () => {
         return currentUser.documents[0];
     } catch (e) {
         console.log(e);
+        throw new Error(e as string);
+    }
+}
+export const getMenu = async ({ category, query }: GetMenuParams) => {
+    try {
+        const queries: string[] = [];
+
+        if(category) queries.push(Query.equal('categories', category));
+        if(query) queries.push(Query.search('name', query));
+
+        const menus = await databases.listDocuments(
+            appwriteConfig.databaseId,
+            appwriteConfig.menuCollectionId,
+            queries,
+        )
+
+        return menus.documents;
+    } catch (e) {
+        throw new Error(e as string);
+    }
+}
+
+export const getCategories = async () => {
+    try {
+        const categories = await databases.listDocuments(
+            appwriteConfig.databaseId,
+            appwriteConfig.categoriesCollectionId,
+        )
+
+        return categories.documents;
+    } catch (e) {
         throw new Error(e as string);
     }
 }
