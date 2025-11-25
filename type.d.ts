@@ -1,6 +1,7 @@
-import { Models } from "react-native-appwrite";
+// types.ts  (Updated for Django + MongoDB backend)
 
-export interface MenuItem extends Models.Document {
+export interface MenuItem {
+    id: string;                // Django/Mongo ID
     name: string;
     price: number;
     image_url: string;
@@ -9,17 +10,20 @@ export interface MenuItem extends Models.Document {
     protein: number;
     rating: number;
     type: string;
+    category: string;          // category id
 }
 
-export interface Category extends Models.Document {
+export interface Category {
+    id: string;
     name: string;
     description: string;
 }
 
-export interface User extends Models.Document {
+export interface User {
+    id: string;
     name: string;
     email: string;
-    avatar: string;
+    avatar?: string;
 }
 
 export interface CartCustomization {
@@ -30,7 +34,7 @@ export interface CartCustomization {
 }
 
 export interface CartItemType {
-    id: string; // menu item id
+    id: string;
     name: string;
     price: number;
     image_url: string;
@@ -38,9 +42,10 @@ export interface CartItemType {
     customizations?: CartCustomization[];
 }
 
+// Zustand Store Types
 export interface CartStore {
-    items: CartItem[];
-    addItem: (item: Omit<CartItem, "quantity">) => void;
+    items: CartItemType[];
+    addItem: (item: Omit<CartItemType, "quantity">) => void;
     removeItem: (id: string, customizations: CartCustomization[]) => void;
     increaseQty: (id: string, customizations: CartCustomization[]) => void;
     decreaseQty: (id: string, customizations: CartCustomization[]) => void;
@@ -49,20 +54,21 @@ export interface CartStore {
     getTotalPrice: () => number;
 }
 
-interface TabBarIconProps {
+// UI Props
+export interface TabBarIconProps {
     focused: boolean;
-    icon: ImageSourcePropType;
+    icon: any;
     title: string;
 }
 
-interface PaymentInfoStripeProps {
+export interface PaymentInfoStripeProps {
     label: string;
     value: string;
     labelStyle?: string;
     valueStyle?: string;
 }
 
-interface CustomButtonProps {
+export interface CustomButtonProps {
     onPress?: () => void;
     title?: string;
     style?: string;
@@ -71,11 +77,11 @@ interface CustomButtonProps {
     isLoading?: boolean;
 }
 
-interface CustomHeaderProps {
+export interface CustomHeaderProps {
     title?: string;
 }
 
-interface CustomInputProps {
+export interface CustomInputProps {
     placeholder?: string;
     value?: string;
     onChangeText?: (text: string) => void;
@@ -84,24 +90,25 @@ interface CustomInputProps {
     keyboardType?: "default" | "email-address" | "numeric" | "phone-pad";
 }
 
-interface ProfileFieldProps {
+export interface ProfileFieldProps {
     label: string;
     value: string;
-    icon: ImageSourcePropType;
+    icon: any;
 }
 
-interface CreateUserParams {
+// API Params
+export interface CreateUserParams {
     email: string;
     password: string;
     name: string;
 }
 
-interface SignInParams {
+export interface SignInParams {
     email: string;
     password: string;
 }
 
-interface GetMenuParams {
-    category: string;
-    query: string;
+export interface GetMenuParams {
+    category?: string;
+    query?: string;
 }

@@ -1,63 +1,41 @@
+// app/(auth)/sign-in.tsx
 import CustomButton from '@/components/CustomButton';
 import CustomInput from '@/components/CustomInput';
-import * as Sentry from "@sentry/react-native";
-import { Link, router } from 'expo-router';
+import useAuthStore from '@/store/auth.store';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 
 const SignIn = () => {
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [form, setForm] = useState({ email: '', password: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [form, setForm] = useState({ email: '', password: '' });
+  const router = useRouter();
+  const login = useAuthStore((s) => s.login);
 
-    const submit = async () => {
-      const {email, password} = form;
+  const submit = async () => {
+    const { email, password } = form;
+    if (!email || !password) return Alert.alert('Error', 'Please enter valid details');
+    setIsSubmitting(true);
+    try {
+      const res = await login(email, password);
+      if (!res.ok) return Alert.alert('Error', res.message || 'Login failed');
+      router.replace('/');
+    } catch (error: any) {
+      Alert.alert('Error', error?.message ?? 'Failed to login');
+    } finally { setIsSubmitting(false); }
+  };
 
-      if (!email || !password) return
-        Alert.alert('Error', 'Please enter the valid details');
-      
-      setIsSubmitting(true)
-      try{
-        Alert.alert('success', 'Logged in successfully');
-        router.replace('/');
-      }
-      catch(error){
-        Alert.alert('Error', 'Failed to login. Please try again later.');
-        Sentry.captureException(error);
-      }
-      finally{
-        setIsSubmitting(false);
-    }
-  }
   return (
     <View className="gap-10 bg-white rounded-lg p-5 mt-5">
-      <CustomInput
-        placeholder="Enter your email"
-        value={form.email}
-        onChangeText={(text) => setForm((prev) => ({ ...prev, email: text }))}
-        label="Email"
-        keyboardType="email-address"
-      />
-      <CustomInput
-        placeholder="Enter your password"
-        value={form.password}
-        onChangeText={(text) => setForm((prev) => ({ ...prev, password: text }))}
-        label="password"
-        secureTextEntry={true}
-      />
-
-      <CustomButton title='Sign-In'
-      isLoading={isSubmitting}
-      onPress={submit}
-      
-      />
-
+      <CustomInput placeholder="Enter your email" value={form.email} onChangeText={(text) => setForm((p) => ({ ...p, email: text }))} label="Email" keyboardType="email-address" />
+      <CustomInput placeholder="Enter your password" value={form.password} onChangeText={(text) => setForm((p) => ({ ...p, password: text }))} label="Password" secureTextEntry />
+      <CustomButton title="Sign-In" isLoading={isSubmitting} onPress={submit} />
       <View className='flex justify-center mt-5 flex-row gap-2'>
-        <Text className="base-regular text-gray-100">  Don't have an account ?</Text>
-        <Link href="/sign-up" className='base-bold text-primary'>
-        Sign-Up
-        </Link>
+        <Text className="base-regular text-gray-100">Don't have an account?</Text>
+        <Text onPress={() => router.push('/sign-up')} className='base-bold text-primary'> Sign-Up</Text>
       </View>
     </View>
   );
-}
+};
+
 export default SignIn;
