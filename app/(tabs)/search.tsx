@@ -1,10 +1,9 @@
-// app/(root)/search.tsx
 import CartButton from "@/components/CartButton";
 import Filter from "@/components/Filter";
 import MenuCard from "@/components/MenuCard";
 import SearchBar from "@/components/SearchBar";
-import { getCategories, getMenu } from "@/lib/appwrite";
-import useAppwrite from "@/lib/useAppwrite";
+import { getCategories, getMenu } from "@/lib/api";
+import { useAppwrite } from "@/lib/useAppwrite";
 import { MenuItem } from "@/type";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect } from "react";
@@ -16,7 +15,9 @@ const Search = () => {
   const { data, refetch, loading } = useAppwrite({ fn: getMenu, params: { category, query, limit: 12 } });
   const { data: categories } = useAppwrite({ fn: getCategories });
 
-  useEffect(() => { refetch({ category, query, limit: 12 }); }, [category, query]);
+  useEffect(() => { 
+    refetch({ category, query, limit: 12 }); 
+  }, [category, query]);
 
   return (
     <SafeAreaView className="bg-white h-full">
@@ -30,7 +31,7 @@ const Search = () => {
             </View>
           );
         }}
-        keyExtractor={(item: any) => item._id}
+        keyExtractor={(item: any) => item.id || item._id}
         numColumns={2}
         columnWrapperClassName="gap-7"
         contentContainerClassName="gap-7 px-5 pb-32"
@@ -50,7 +51,7 @@ const Search = () => {
             <Filter categories={categories ?? []} />
           </View>
         )}
-        ListEmptyComponent={() => !loading && <Text>No results</Text>}
+        ListEmptyComponent={() => !loading && <Text className="text-center text-gray-500">No food items found</Text>}
       />
     </SafeAreaView>
   );

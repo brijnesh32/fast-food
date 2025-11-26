@@ -1,11 +1,33 @@
-// app/(root)/index.tsx
 import CartButton from "@/components/CartButton";
 import { offers } from "@/constants";
+import { djangoApi } from "@/lib/api";
 import cn from "clsx";
+import { useEffect, useState } from "react";
 import { FlatList, Image, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Index() {
+  const [categories, setCategories] = useState<any[]>([]);
+  const [foods, setFoods] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [categoriesData, foodsData] = await Promise.all([
+          djangoApi.getCategories(),
+          djangoApi.getFoods()
+        ]);
+        setCategories(categoriesData);
+        setFoods(foodsData);
+        console.log('Home data loaded:', { categories: categoriesData.length, foods: foodsData.length });
+      } catch (error) {
+        console.log('Failed to load home data:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   return (
     <SafeAreaView className="flex-1 bg-white">
       <FlatList
@@ -26,7 +48,6 @@ export default function Index() {
                 <View className={cn("offer-card__info", isEven ? "pl-10" : "pr-10")}>
                   <Text className="h1-bold text-white leading-tight">{item.title}</Text>
 
-                  {/* FIXED PATH */}
                   <Image
                     source={require("../../assets/icons/arrow-right.png")}
                     className="size-10"

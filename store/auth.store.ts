@@ -1,66 +1,103 @@
-// store/auth.store.ts
-import { createUser, getCurrentUser, logout, signIn } from "@/lib/appwrite";
-import type { User } from "@/type";
-import { create } from "zustand";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
-type AuthState = {
-  isAuthenticated: boolean;
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  phone?: string;
+}
+
+interface AuthState {
   user: User | null;
+  isAuthenticated: boolean;
   isLoading: boolean;
-  setIsAuthenticated: (v: boolean) => void;
-  setUser: (u: User | null) => void;
-  setLoading: (l: boolean) => void;
-  fetchAuthenticatedUser: () => Promise<void>;
   login: (email: string, password: string) => Promise<{ ok: boolean; message?: string }>;
   register: (name: string, email: string, password: string) => Promise<{ ok: boolean; message?: string }>;
   signOut: () => Promise<void>;
-};
+  fetchAuthenticatedUser: () => Promise<void>;
+}
 
-const useAuthStore = create<AuthState>((set) => ({
-  isAuthenticated: false,
-  user: null,
-  isLoading: true,
+// Create the auth store
+const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
 
-  setIsAuthenticated: (v) => set({ isAuthenticated: v }),
-  setUser: (u) => set({ user: u }),
-  setLoading: (l) => set({ isLoading: l }),
+      login: async (email: string, password: string) => {
+        try {
+          set({ isLoading: true });
+          
+          // Mock login - replace with actual Django auth when ready
+          if (email && password) {
+            const user: User = {
+              id: '1',
+              name: 'Test User',
+              email: email,
+              avatar: '',
+              phone: '+1234567890'
+            };
+            
+            set({ user, isAuthenticated: true });
+            return { ok: true };
+          } else {
+            return { ok: false, message: 'Invalid credentials' };
+          }
+        } catch (error) {
+          return { ok: false, message: 'Login failed' };
+        } finally {
+          set({ isLoading: false });
+        }
+      },
 
-  fetchAuthenticatedUser: async () => {
-    set({ isLoading: true });
-    try {
-      const user = await getCurrentUser();
-      if (user) set({ isAuthenticated: true, user: user as User });
-      else set({ isAuthenticated: false, user: null });
-    } catch (e) {
-      console.log("fetchAuthenticatedUser error", e);
-      set({ isAuthenticated: false, user: null });
-    } finally { set({ isLoading: false }); }
-  },
+      register: async (name: string, email: string, password: string) => {
+        try {
+          set({ isLoading: true });
+          
+          // Mock registration - replace with actual Django auth when ready
+          if (name && email && password) {
+            const user: User = {
+              id: '1',
+              name: name,
+              email: email,
+              avatar: '',
+              phone: '+1234567890'
+            };
+            
+            set({ user, isAuthenticated: true });
+            return { ok: true };
+          } else {
+            return { ok: false, message: 'Invalid registration data' };
+          }
+        } catch (error) {
+          return { ok: false, message: 'Registration failed' };
+        } finally {
+          set({ isLoading: false });
+        }
+      },
 
-  login: async (email, password) => {
-    set({ isLoading: true });
-    try {
-      const user = await signIn({ email, password });
-      if (!user) return { ok: false, message: "Login failed" };
-      set({ isAuthenticated: true, user: user as User });
-      return { ok: true };
-    } catch (e: any) { return { ok: false, message: e?.message || "Login error" }; } finally { set({ isLoading: false }); }
-  },
+      signOut: async () => {
+        set({ user: null, isAuthenticated: false });
+      },
 
-  register: async (name, email, password) => {
-    set({ isLoading: true });
-    try {
-      const user = await createUser({ name, email, password });
-      if (!user) return { ok: false, message: "Register failed" };
-      set({ isAuthenticated: true, user: user as User });
-      return { ok: true };
-    } catch (e: any) { return { ok: false, message: e?.message || "Register error" }; } finally { set({ isLoading: false }); }
-  },
+      fetchAuthenticatedUser: async () => {
+        // Mock - you can implement actual token-based auth later
+        const { user } = get();
+        if (user) {
+          set({ isAuthenticated: true });
+        }
+      },
+    }),
+    {
+      name: 'auth-storage',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
 
-  signOut: async () => {
-    await logout();
-    set({ isAuthenticated: false, user: null });
-  },
-}));
-
+// Export as default
 export default useAuthStore;

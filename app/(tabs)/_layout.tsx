@@ -1,8 +1,10 @@
 import { images } from "@/constants";
+import { djangoApi } from '@/lib/api';
 import useAuthStore from "@/store/auth.store";
 import { TabBarIconProps } from "@/type";
 import cn from "clsx";
 import { Redirect, Tabs } from "expo-router";
+import { useEffect } from 'react';
 import { Image, Text, View } from "react-native";
 
 const TabBarIcon = ({ focused, icon, title }: TabBarIconProps) => (
@@ -16,6 +18,28 @@ const TabBarIcon = ({ focused, icon, title }: TabBarIconProps) => (
 
 export default function TabLayout() {
     const { isAuthenticated } = useAuthStore();
+
+    // Test Django backend connection
+    useEffect(() => {
+        const testDjangoBackend = async () => {
+            try {
+                const health = await djangoApi.healthCheck();
+                console.log('✅ Django Backend connected:', health);
+                
+                // Test getting categories and foods
+                const categories = await djangoApi.getCategories();
+                const foods = await djangoApi.getFoods();
+                console.log('✅ Django Categories count:', categories.length);
+                console.log('✅ Django Foods count:', foods.length);
+            } catch (error) {
+                console.log('❌ Django Backend connection failed:', error);
+            }
+        };
+        
+        if (isAuthenticated) {
+            testDjangoBackend();
+        }
+    }, [isAuthenticated]);
 
     if(!isAuthenticated) return <Redirect href="/sign-in" />
 

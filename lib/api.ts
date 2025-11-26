@@ -1,44 +1,118 @@
-// lib/api.ts
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_CONFIG } from '@/constants/api';
 
-export const API_BASE = (process.env.API_BASE_URL || "https://fast-food-backend-yx5s.onrender.com") + "/api";
-const TOKEN_KEY = "FF_APP_TOKEN";
+// ========== DJANGO BACKEND SERVICE ==========
+class DjangoApiService {
+  private baseURL: string;
 
-export type ApiResponse<T=any> = { success: boolean; data?: T; message?: string; status?: number };
+  constructor() {
+    this.baseURL = API_CONFIG.DJANGO_BASE_URL;
+  }
 
-async function getStoredToken(): Promise<string | null> {
-  try { return await AsyncStorage.getItem(TOKEN_KEY); } catch { return null; }
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    try {
+      const url = `${this.baseURL}${endpoint}`;
+      const config: RequestInit = {
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        ...options,
+      };
+
+      if (options.body) {
+        config.body = JSON.stringify(options.body);
+      }
+
+      console.log('🌐 Django API Call:', url);
+      
+      const response = await fetch(url, config);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data: T = await response.json();
+      return data;
+    } catch (error) {
+      console.error('❌ Django API Request failed:', error);
+      throw error;
+    }
+  }
+
+  async healthCheck() {
+    return this.request<{ status: string; db: string }>(API_CONFIG.DJANGO_ENDPOINTS.HEALTH);
+  }
+
+  async getCategories() {
+    return this.request<any[]>(API_CONFIG.DJANGO_ENDPOINTS.CATEGORIES);
+  }
+
+  async getFoods() {
+    return this.request<any[]>(API_CONFIG.DJANGO_ENDPOINTS.FOODS);
+  }
+
+  async getFeaturedFoods() {
+    return this.request<any[]>(API_CONFIG.DJANGO_ENDPOINTS.FEATURED_FOODS);
+  }
+
+  async searchFoods(query: string) {
+    return this.request<any[]>(`${API_CONFIG.DJANGO_ENDPOINTS.SEARCH_FOODS}?q=${encodeURIComponent(query)}`);
+  }
+
+  async createOrder(orderData: any) {
+    return this.request<{ id: string }>(API_CONFIG.DJANGO_ENDPOINTS.ORDER_CREATE, {
+      method: 'POST',
+      body: orderData,
+    });
+  }
 }
 
-export async function setToken(token: string | null) {
+export const djangoApi = new DjangoApiService();
+
+// Simple database functions to replace Appwrite
+export const getMenu = async ({ category, query, limit = 10 }: { category?: string; query?: string; limit?: number }) => {
   try {
-    if (token === null) return AsyncStorage.removeItem(TOKEN_KEY);
-    await AsyncStorage.setItem(TOKEN_KEY, token);
-  } catch {}
-}
+    let foods = await djangoApi.getFoods();
+    
+    // Filter by category if provided
+    if (category && category !== 'all') {
+      foods = foods.filter(food => food.category?.id === category || food.category?._id === category);
+    }
+    
+    // Filter by search query if provided
+    if (query) {
+      foods = foods.filter(food => 
+        food.name.toLowerCase().includes(query.toLowerCase()) ||
+        food.description.toLowerCase().includes(query.toLowerCase())
+      );
+    }
+    
+    // Apply limit
+    if (limit) {
+      foods = foods.slice(0, limit);
+    }
+    
+    return foods;
+  } catch (error) {
+    console.error('getMenu error:', error);
+    return [];
+  }
+};
 
-export async function clearToken() {
-  try { await AsyncStorage.removeItem(TOKEN_KEY); } catch {}
-}
-
-async function request<T = any>(path: string, opts: RequestInit = {}): Promise<ApiResponse<T>> {
-  const url = `${API_BASE}${path}`;
-  const headers: Record<string, string> = { "Content-Type": "application/json", ...(opts.headers as any || {}) };
-
+export const getCategories = async () => {
   try {
-    const token = await getStoredToken();
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-  } catch {}
+    return await djangoApi.getCategories();
+  } catch (error) {
+    console.error('getCategories error:', error);
+    return [];
+  }
+};
 
-  const res = await fetch(url, { ...opts, headers });
-  const text = await res.text();
-  let json: any = null;
-  try { json = text ? JSON.parse(text) : null; } catch {}
-  if (!res.ok) return { success: false, message: json?.detail || json?.message || res.statusText, status: res.status };
-  return { success: true, data: json };
-}
-
-export async function apiGet<T = any>(path: string) { return request<T>(path, { method: "GET" }); }
-export async function apiPost<T = any>(path: string, body?: any) { return request<T>(path, { method: "POST", body: JSON.stringify(body) }); }
-export async function apiPut<T = any>(path: string, body?: any) { return request<T>(path, { method: "PUT", body: JSON.stringify(body) }); }
-export async function apiDelete<T = any>(path: string) { return request<T>(path, { method: "DELETE" }); }
+export const createOrder = async (orderData: any) => {
+  try {
+    return await djangoApi.createOrder(orderData);
+  } catch (error) {
+    console.error('createOrder error:', error);
+    throw error;
+  }
+};

@@ -1,29 +1,35 @@
-// lib/useAppwrite.ts
-import { useCallback, useEffect, useState } from "react";
-import { Alert } from "react-native";
+import { useEffect, useState } from 'react';
 
-type Fn<TParams, TResult> = (params: TParams) => Promise<TResult>;
+interface UseApiOptions {
+  fn: (...args: any[]) => Promise<any>;
+  params?: any;
+}
 
-export default function useAppwrite<T, P extends Record<string, any> = {}>({ fn, params = {} as P, skip = false }: { fn: Fn<P, any>; params?: P; skip?: boolean }) {
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(!skip);
+export const useApi = ({ fn, params }: UseApiOptions) => {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = useCallback(async (p: P) => {
-    setLoading(true); setError(null);
+  const refetch = async (newParams?: any) => {
+    setLoading(true);
+    setError(null);
     try {
-      const result = await fn(p);
-      setData(result as T);
+      const result = await fn(newParams || params);
+      setData(result);
     } catch (err: any) {
-      const msg = err?.message ?? "Unknown error";
-      setError(msg);
-      Alert.alert("Error", msg);
-    } finally { setLoading(false); }
-  }, [fn]);
+      setError(err.message);
+      console.error('API Error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  useEffect(() => { if (!skip) fetchData(params); }, []);
-
-  const refetch = async (newParams?: P) => await fetchData((newParams ?? params) as P);
+  useEffect(() => {
+    refetch();
+  }, []);
 
   return { data, loading, error, refetch };
-}
+};
+
+// Keep the old name for compatibility
+export const useAppwrite = useApi;
