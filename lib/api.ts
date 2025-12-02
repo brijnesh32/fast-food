@@ -82,25 +82,39 @@ export const djangoApi = new DjangoApiService();
 // Enhanced database functions with better error handling and caching
 let cachedFoods: any[] | null = null;
 let cachedCategories: any[] | null = null;
+// Add cache at the top of your file
+let allFoodsCache: any[] | null = null;
 
 export const getMenu = async ({ category, query, limit = 10 }: { category?: string; query?: string; limit?: number }) => {
   try {
     console.log('📋 Fetching menu with params:', { category, query, limit });
     
-    let foods = await djangoApi.getFoods();
+    // 🎯 FETCH ALL FOODS ONLY ONCE
+    if (!allFoodsCache) {
+      console.log('🔄 First time - fetching all foods from API');
+      const foodsFromApi = await djangoApi.getFoods();
+      
+      // Map fields once
+      allFoodsCache = foodsFromApi.map(food => ({
+        ...food,
+        image_url: food.image || '', // Create image_url from image
+        id: food.id || food._id, // Ensure id field exists
+      }));
+      
+      console.log('💾 Cached', allFoodsCache.length, 'food items');
+    }
     
-    // 🎯 CRITICAL FIX: Map 'image' field to 'image_url'
-    foods = foods.map(food => ({
-      ...food,
-      image_url: food.image || '', // Create image_url from image
-      id: food.id || food._id, // Ensure id field exists
-    }));
+    // Start with cached data
+    let foods = [...allFoodsCache];
     
-    console.log('🔄 Mapped foods data:', foods);
+    console.log('🔍 Applying filters to', foods.length, 'cached items');
     
     // Filter by category if provided
     if (category && category !== 'all') {
-      foods = foods.filter(food => food.category?.id === category);
+      foods = foods.filter(food => 
+        food.category?.id === category
+      );
+      console.log(`🎯 Filtered by category ${category}:`, foods.length, 'items');
     }
     
     // Filter by search query if provided
@@ -109,6 +123,7 @@ export const getMenu = async ({ category, query, limit = 10 }: { category?: stri
         food.name?.toLowerCase().includes(query.toLowerCase()) ||
         food.description?.toLowerCase().includes(query.toLowerCase())
       );
+      console.log(`🔍 Filtered by search "${query}":`, foods.length, 'items');
     }
     
     // Apply limit
@@ -116,11 +131,18 @@ export const getMenu = async ({ category, query, limit = 10 }: { category?: stri
       foods = foods.slice(0, limit);
     }
     
+    console.log('✅ Final menu items:', foods.length);
     return foods;
   } catch (error) {
     console.error('❌ getMenu error:', error);
     return getMockMenuData({ category, query, limit });
   }
+};
+
+// Add function to clear cache if needed
+export const clearFoodCache = () => {
+  allFoodsCache = null;
+  console.log('🗑️ Cleared food cache');
 };
 
 export const getCategories = async () => {

@@ -2,7 +2,7 @@ import CartButton from "@/components/CartButton";
 import Filter from "@/components/Filter";
 import MenuCard from "@/components/MenuCard";
 import SearchBar from "@/components/SearchBar";
-import { getCategories, getMenu, seedDatabase } from "@/lib/api";
+import { clearFoodCache, getCategories, getMenu } from "@/lib/api";
 import { MenuItem } from "@/type";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -11,50 +11,99 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const Search = () => {
   const { category, query } = useLocalSearchParams<{query?: string; category?: string}>();
-  const [items, setItems] = useState<MenuItem[]>([]);
+  const [allItems, setAllItems] = useState<MenuItem[]>([]); // Store ALL items
+  const [displayItems, setDisplayItems] = useState<MenuItem[]>([]); // Items to display
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Load data on first render
   useEffect(() => {
-    fetchData();
-  }, [category, query]);
+    const loadInitialData = async () => {
+      setLoading(true);
+      try {
+        console.log('🚀 Initial data load...');
+        const [menuData, categoriesData] = await Promise.all([
+          getMenu({ limit: 12 }), // Load all items once
+          getCategories()
+        ]);
+        
+        console.log('✅ Initial data loaded:', menuData?.length || 0, 'items');
+        
+        // Store ALL items separately
+        setAllItems(Array.isArray(menuData) ? menuData : []);
+        // Initially display ALL items
+        setDisplayItems(Array.isArray(menuData) ? menuData : []);
+        setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+      } catch (error) {
+        console.log('❌ Error in loadInitialData:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const fetchData = async () => {
-    setLoading(true);
+    loadInitialData();
+  }, []); // Empty dependency array - runs only once
+
+  // Filter items locally when category or query changes
+  useEffect(() => {
+    if (allItems.length === 0) return;
+    
+    console.log('🔍 Applying local filters... Category:', category, 'Query:', query);
+    
+    // Start with ALL items every time
+    let filteredItems = [...allItems];
+    
+    // Filter by category
+    if (category && category !== 'all') {
+      filteredItems = filteredItems.filter(item => 
+        item.category?.id === category
+      );
+    }
+    
+    // Filter by search query
+    if (query) {
+      filteredItems = filteredItems.filter(item => 
+        item.name?.toLowerCase().includes(query.toLowerCase()) ||
+        item.description?.toLowerCase().includes(query.toLowerCase())
+      );
+    }
+    
+    // Apply limit
+    const limit = 12;
+    if (filteredItems.length > limit) {
+      filteredItems = filteredItems.slice(0, limit);
+    }
+    
+    console.log('✅ Local filter applied:', filteredItems.length, 'items (out of', allItems.length, 'total)');
+    setDisplayItems(filteredItems);
+    
+  }, [category, query, allItems]); // Re-filter when these change
+
+  const handleRefresh = async () => {
     try {
-      console.log('🔄 Fetching data...');
+      setLoading(true);
+      console.log('🔄 Manually refreshing data...');
+      clearFoodCache(); // Clear cache
+      
       const [menuData, categoriesData] = await Promise.all([
-        getMenu({ category, query, limit: 12 }),
+        getMenu({ limit: 12 }),
         getCategories()
       ]);
       
-      console.log('✅ Menu data received:', menuData?.length || 0, 'items');
-      console.log('✅ Categories data received:', categoriesData?.length || 0, 'categories');
-      
-      setItems(Array.isArray(menuData) ? menuData : []);
+      // Update both arrays
+      setAllItems(Array.isArray(menuData) ? menuData : []);
+      setDisplayItems(Array.isArray(menuData) ? menuData : []);
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
     } catch (error) {
-      console.log('❌ Error in fetchData:', error);
+      console.log('❌ Refresh error:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSeedDatabase = async () => {
-    try {
-      console.log('🌱 Seeding database...');
-      await seedDatabase();
-      console.log('✅ Database seeded! Reloading data...');
-      // Reload the data after seeding
-      await fetchData();
-    } catch (error) {
-      console.log('❌ Seed failed:', error);
-    }
-  };
+  console.log('📊 Current state - All items:', allItems.length, 'Display items:', displayItems.length, 'Loading:', loading);
 
-  console.log('📊 Current state - Items:', items.length, 'Loading:', loading);
-
-  if (loading && items.length === 0) {
+  if (loading && allItems.length === 0) {
     return (
       <SafeAreaView className="bg-white h-full justify-center items-center">
         <ActivityIndicator size="large" color="#0000ff" />
@@ -65,22 +114,20 @@ const Search = () => {
 
   return (
     <SafeAreaView className="bg-white h-full">
-      {/* Demo data notice */}
-      {items.length > 0 && (
-        <View className="bg-blue-100 p-2 mx-5 mt-2 rounded-lg">
-          <Text className="text-blue-800 text-center text-xs">
-            Showing {items.length} food items
-          </Text>
-          <TouchableOpacity onPress={handleSeedDatabase} className="mt-1">
-            <Text className="text-green-600 text-center text-xs font-bold">
-              Tap to load REAL food data 🌱
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {/* Status bar */}
+      <View className="bg-blue-100 p-2 mx-5 mt-2 rounded-lg flex-row justify-between items-center">
+        <Text className="text-blue-800 text-xs">
+          Showing {displayItems.length} of {allItems.length} items 
+          {category && category !== 'all' ? ` • Filtered by: ${category}` : ''}
+          {query ? ` • Search: "${query}"` : ''}
+        </Text>
+        <TouchableOpacity onPress={handleRefresh} className="bg-blue-500 px-3 py-1 rounded">
+          <Text className="text-white text-xs">Refresh</Text>
+        </TouchableOpacity>
+      </View>
 
       <FlatList
-        data={items}
+        data={displayItems}
         renderItem={({ item, index }) => {
           const isFirstRightColItem = index % 2 === 0;
           return (
@@ -92,7 +139,7 @@ const Search = () => {
             </View>
           );
         }}
-        keyExtractor={(item: MenuItem, index) => item.id || `item-${index}`}
+        keyExtractor={(item: MenuItem) => item.id || `item-${item.name}`}
         numColumns={2}
         columnWrapperClassName="gap-4 justify-between"
         contentContainerClassName="gap-4 px-5 pb-32"
@@ -117,6 +164,11 @@ const Search = () => {
             <Text className="text-center text-gray-500 text-lg">
               {loading ? 'Loading...' : 'No food items found'}
             </Text>
+            {query && (
+              <Text className="text-center text-gray-400 mt-2">
+                Try a different search term
+              </Text>
+            )}
           </View>
         }
       />

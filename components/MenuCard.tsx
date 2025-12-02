@@ -6,13 +6,14 @@ import { Image, Text, TouchableOpacity, View } from "react-native";
 const MenuCard = ({ item }: { item: MenuItem }) => {
   const { addItem } = useCartStore();
 
-  // Use image_url (created by our mapping) or fallback
-  const imageSource = item.image_url || 'https://via.placeholder.com/150';
+  // Ensure image_url exists
+  const imageSource = item.image_url || item.image || 'https://via.placeholder.com/150';
   
-  console.log('🖼️ Rendering item:', item.name, 'Image:', imageSource);
-
   return (
-    <View className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 items-center min-h-[180px]">
+    <View 
+      key={item.id} // Add key prop to View if it's in a list
+      className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 items-center min-h-[180px]"
+    >
       <Image 
         source={{ uri: imageSource }} 
         className="w-24 h-24 rounded-lg mb-2"

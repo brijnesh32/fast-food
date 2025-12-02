@@ -25,18 +25,20 @@ const Filter = ({ categories }: { categories: Category[] }) => {
     return (
         <FlatList
             data={filterData}
-            keyExtractor={(item: any) => item._id || item.$id}
+            keyExtractor={(item: any) => item._id || item.$id || item.id || "all"}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerClassName="gap-x-2 pb-3"
             renderItem={({ item }: any) => {
-                const id = item._id || item.$id;
+                const id = item._id || item.$id || item.id || "all";
+                const name = item.name || "All";
+                
                 return (
                     <TouchableOpacity
-                        key={id}
+                        key={id} // Add this key prop
                         className={cn(
-                            "filter",
-                            active === id ? "bg-amber-500" : "bg-white"
+                            "px-4 py-2 rounded-full border border-gray-200",
+                            active === id ? "bg-primary border-primary" : "bg-white"
                         )}
                         style={
                             Platform.OS === "android"
@@ -47,11 +49,11 @@ const Filter = ({ categories }: { categories: Category[] }) => {
                     >
                         <Text
                             className={cn(
-                                "body-medium",
-                                active === id ? "text-white" : "text-gray-200"
+                                "text-sm font-medium",
+                                active === id ? "text-white" : "text-gray-700"
                             )}
                         >
-                            {item.name}
+                            {name}
                         </Text>
                     </TouchableOpacity>
                 );

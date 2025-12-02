@@ -32,8 +32,7 @@ const Profile = () => {
   }, []);
 
   const handleEdit = () => {
-    // navigate to an edit-profile screen (if you have one)
-    router.push("/profile/edit");
+    // navigate to an edit-profile screen (if you have one));
   };
 
   const handleLogout = async () => {
