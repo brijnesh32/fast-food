@@ -19,7 +19,7 @@ class DjangoApiService {
         ...options,
       };
 
-      if (options.body) {
+      if (options.body && typeof options.body === 'object') {
         config.body = JSON.stringify(options.body);
       }
 
@@ -28,7 +28,17 @@ class DjangoApiService {
       const response = await fetch(url, config);
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Clone the response before reading it for error details
+        const errorResponse = response.clone();
+        let errorDetails = '';
+        try {
+          const errorData = await errorResponse.json();
+          errorDetails = JSON.stringify(errorData);
+        } catch {
+          errorDetails = await errorResponse.text();
+        }
+        
+        throw new Error(`HTTP ${response.status}: ${response.statusText}. ${errorDetails}`);
       }
       
       const data: T = await response.json();
@@ -69,43 +79,143 @@ class DjangoApiService {
 
 export const djangoApi = new DjangoApiService();
 
-// Simple database functions to replace Appwrite
+// Enhanced database functions with better error handling and caching
+let cachedFoods: any[] | null = null;
+let cachedCategories: any[] | null = null;
+
 export const getMenu = async ({ category, query, limit = 10 }: { category?: string; query?: string; limit?: number }) => {
   try {
+    console.log('📋 Fetching menu with params:', { category, query, limit });
+    
     let foods = await djangoApi.getFoods();
+    
+    // 🎯 CRITICAL FIX: Map 'image' field to 'image_url'
+    foods = foods.map(food => ({
+      ...food,
+      image_url: food.image || '', // Create image_url from image
+      id: food.id || food._id, // Ensure id field exists
+    }));
+    
+    console.log('🔄 Mapped foods data:', foods);
     
     // Filter by category if provided
     if (category && category !== 'all') {
-      foods = foods.filter(food => food.category?.id === category || food.category?._id === category);
+      foods = foods.filter(food => food.category?.id === category);
     }
     
     // Filter by search query if provided
     if (query) {
       foods = foods.filter(food => 
-        food.name.toLowerCase().includes(query.toLowerCase()) ||
-        food.description.toLowerCase().includes(query.toLowerCase())
+        food.name?.toLowerCase().includes(query.toLowerCase()) ||
+        food.description?.toLowerCase().includes(query.toLowerCase())
       );
     }
     
     // Apply limit
-    if (limit) {
+    if (limit && foods.length > limit) {
       foods = foods.slice(0, limit);
     }
     
     return foods;
   } catch (error) {
-    console.error('getMenu error:', error);
-    return [];
+    console.error('❌ getMenu error:', error);
+    return getMockMenuData({ category, query, limit });
   }
 };
 
 export const getCategories = async () => {
   try {
-    return await djangoApi.getCategories();
+    console.log('📂 Fetching categories...');
+    
+    // Use cached data if available, otherwise fetch
+    if (cachedCategories) {
+      console.log('✅ Using cached categories');
+      return cachedCategories;
+    }
+    
+    const categories = await djangoApi.getCategories();
+    cachedCategories = categories; // Cache the result
+    console.log('✅ Categories data:', categories);
+    return categories;
   } catch (error) {
-    console.error('getCategories error:', error);
-    return [];
+    console.error('❌ getCategories error:', error);
+    // Return mock categories for development
+    return getMockCategories();
   }
+};
+
+// Clear cache function (optional)
+export const clearCache = () => {
+  cachedFoods = null;
+  cachedCategories = null;
+};
+
+// Mock data for development when backend is down
+const getMockCategories = () => [
+  { id: '1', name: 'Burgers', slug: 'burgers' },
+  { id: '2', name: 'Pizza', slug: 'pizza' },
+  { id: '3', name: 'Drinks', slug: 'drinks' },
+  { id: '4', name: 'Desserts', slug: 'desserts' },
+];
+
+const getMockMenuData = ({ category, query, limit }: { category?: string; query?: string; limit?: number }) => {
+  const mockFoods = [
+    {
+      id: '1',
+      name: 'Classic Burger',
+      price: 9.99,
+      image: 'https://via.placeholder.com/300x200/FF6B6B/white?text=Burger',
+      image_url: 'https://via.placeholder.com/300x200/FF6B6B/white?text=Burger', // Added for consistency
+      description: 'Juicy beef burger with fresh vegetables',
+      category: { id: '1', name: 'Burgers' }
+    },
+    {
+      id: '2',
+      name: 'Pepperoni Pizza',
+      price: 12.99,
+      image: 'https://via.placeholder.com/300x200/4ECDC4/white?text=Pizza',
+      image_url: 'https://via.placeholder.com/300x200/4ECDC4/white?text=Pizza', // Added for consistency
+      description: 'Classic pizza with pepperoni and cheese',
+      category: { id: '2', name: 'Pizza' }
+    },
+    {
+      id: '3',
+      name: 'Cola',
+      price: 2.99,
+      image: 'https://via.placeholder.com/300x200/45B7D1/white?text=Drink',
+      image_url: 'https://via.placeholder.com/300x200/45B7D1/white?text=Drink', // Added for consistency
+      description: 'Refreshing cola drink',
+      category: { id: '3', name: 'Drinks' }
+    },
+    {
+      id: '4',
+      name: 'Chocolate Cake',
+      price: 5.99,
+      image: 'https://via.placeholder.com/300x200/96CEB4/white?text=Dessert',
+      image_url: 'https://via.placeholder.com/300x200/96CEB4/white?text=Dessert', // Added for consistency
+      description: 'Rich chocolate cake',
+      category: { id: '4', name: 'Desserts' }
+    },
+  ];
+
+  let foods = [...mockFoods];
+  
+  if (category && category !== 'all') {
+    foods = foods.filter(food => food.category.id === category);
+  }
+  
+  if (query) {
+    foods = foods.filter(food => 
+      food.name.toLowerCase().includes(query.toLowerCase()) ||
+      food.description.toLowerCase().includes(query.toLowerCase())
+    );
+  }
+  
+  if (limit) {
+    foods = foods.slice(0, limit);
+  }
+  
+  return foods;
 };
 
 export const createOrder = async (orderData: any) => {
@@ -113,6 +223,20 @@ export const createOrder = async (orderData: any) => {
     return await djangoApi.createOrder(orderData);
   } catch (error) {
     console.error('createOrder error:', error);
+    throw error;
+  };
+};
+// Add this to your lib/api.ts
+export const seedDatabase = async () => {
+  try {
+    console.log('🌱 Seeding database...');
+    const result = await djangoApi.request('/api/seed-database/', {
+      method: 'POST'
+    });
+    console.log('✅ Database seeded:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ Seed database error:', error);
     throw error;
   }
 };

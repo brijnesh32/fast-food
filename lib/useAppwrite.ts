@@ -1,35 +1,50 @@
-import { useEffect, useState } from 'react';
+// lib/useAppwrite.ts (fixed version)
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-interface UseApiOptions {
-  fn: (...args: any[]) => Promise<any>;
-  params?: any;
-}
-
-export const useApi = ({ fn, params }: UseApiOptions) => {
-  const [data, setData] = useState<any>(null);
+export const useAppwrite = <T>({ fn, params }: { fn: (...args: any[]) => Promise<T>; params?: any }) => {
+  const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+  const isMounted = useRef(true);
+  const lastCallId = useRef(0);
 
-  const refetch = async (newParams?: any) => {
+  const refetch = useCallback(async (newParams?: any) => {
+    if (!isMounted.current) return;
+    
+    const callId = ++lastCallId.current;
     setLoading(true);
     setError(null);
+
     try {
       const result = await fn(newParams || params);
-      setData(result);
-    } catch (err: any) {
-      setError(err.message);
-      console.error('API Error:', err);
+      
+      // Only update state if this is the most recent call
+      if (isMounted.current && callId === lastCallId.current) {
+        setData(result);
+        setError(null);
+      }
+    } catch (err) {
+      // Only update state if this is the most recent call
+      if (isMounted.current && callId === lastCallId.current) {
+        setError(err as Error);
+        setData(null);
+      }
     } finally {
-      setLoading(false);
+      // Only update state if this is the most recent call
+      if (isMounted.current && callId === lastCallId.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [fn, params]);
 
   useEffect(() => {
+    isMounted.current = true;
     refetch();
-  }, []);
+    
+    return () => {
+      isMounted.current = false;
+    };
+  }, [refetch]);
 
   return { data, loading, error, refetch };
 };
-
-// Keep the old name for compatibility
-export const useAppwrite = useApi;
