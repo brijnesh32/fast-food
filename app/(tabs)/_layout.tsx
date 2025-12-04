@@ -1,3 +1,4 @@
+import "@/app/globals.css";
 import { images } from "@/constants";
 import { djangoApi } from '@/lib/api';
 import useAuthStore from "@/store/auth.store";
@@ -6,6 +7,7 @@ import cn from "clsx";
 import { Redirect, Tabs } from "expo-router";
 import { useEffect } from 'react';
 import { Image, Text, View } from "react-native";
+
 
 const TabBarIcon = ({ focused, icon, title }: TabBarIconProps) => (
     <View className="tab-icon">

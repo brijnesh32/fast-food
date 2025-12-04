@@ -1,30 +1,68 @@
 // components/MenuCard.tsx
 import { useCartStore } from "@/store/cart.store";
 import { MenuItem } from "@/type";
+import { useState } from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 
 const MenuCard = ({ item }: { item: MenuItem }) => {
   const { addItem } = useCartStore();
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
-  // Ensure image_url exists
-  const imageSource = item.image_url || item.image || 'https://via.placeholder.com/150';
-  
+  // Ensure image_url exists with fallback
+  const imageSource = item.image_url || item.image;
+  const finalImageSource = imageSource || 'https://via.placeholder.com/150';
+
+  // Handle image load
+  const handleImageLoad = () => {
+    setImageLoaded(true);
+  };
+
+  // Handle image error
+  const handleImageError = () => {
+    setImageError(true);
+    setImageLoaded(true); // Stop loading state even if error
+  };
+
   return (
-    <View 
-      key={item.id} // Add key prop to View if it's in a list
-      className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 items-center min-h-[180px]"
-    >
-      <Image 
-        source={{ uri: imageSource }} 
-        className="w-24 h-24 rounded-lg mb-2"
-        resizeMode="cover"
-      />
+    <View className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 items-center min-h-[180px] relative">
+      {/* Image Container with Loading State */}
+      <View className="w-24 h-24 rounded-lg mb-2 relative overflow-hidden">
+        {/* Loading Skeleton */}
+        {!imageLoaded && (
+          <View className="absolute inset-0 bg-gray-200 animate-pulse rounded-lg" />
+        )}
+        
+        {/* Actual Image */}
+        <Image 
+          source={{ uri: finalImageSource }} 
+          className="w-24 h-24 rounded-lg"
+          style={{ opacity: imageLoaded ? 1 : 0 }}
+          resizeMode="cover"
+          onLoad={handleImageLoad}
+          onError={handleImageError}
+          fadeDuration={100}
+        />
+        
+        {/* Fallback if image fails to load */}
+        {imageError && (
+          <View className="absolute inset-0 bg-gray-300 rounded-lg items-center justify-center">
+            <Text className="text-gray-500 text-xs text-center px-1">No Image</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Food Name */}
       <Text className="text-center font-bold text-dark-100 mb-1" numberOfLines={1}>
         {item.name}
       </Text>
-      <Text className="text-gray-200 mb-3">${item.price}</Text>
+      
+      {/* Price */}
+      <Text className="text-gray-200 mb-3">${item.price?.toFixed(2) || '0.00'}</Text>
+      
+      {/* Add to Cart Button */}
       <TouchableOpacity 
-        className="bg-primary px-4 py-2 rounded-full"
+        className="bg-primary px-4 py-2 rounded-full active:opacity-80"
         onPress={() => addItem({ 
           id: item.id, 
           name: item.name, 

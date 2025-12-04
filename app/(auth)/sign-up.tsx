@@ -13,26 +13,66 @@ const SignUp = () => {
 
   const submit = async () => {
     const { name, email, password } = form;
-    if (!name || !email || !password) return Alert.alert('Error', 'Please enter valid details');
+    if (!name || !email || !password) {
+      Alert.alert('Error', 'Please enter valid details');
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
       const res = await register(name, email, password);
-      if (!res.ok) return Alert.alert('Error', res.message || 'Register failed');
-      router.replace('/');
+      if (!res.ok) {
+        Alert.alert('Error', res.message || 'Register failed');
+        return;
+      }
+      console.log('Registration successful');
     } catch (e: any) {
       Alert.alert('Error', e?.message || 'Registration failed');
-    } finally { setIsSubmitting(false); }
+    } finally { 
+      setIsSubmitting(false); 
+    }
   };
 
   return (
     <View className="gap-10 bg-white rounded-lg p-5 mt-5">
-      <CustomInput placeholder="Enter your full name" value={form.name} onChangeText={(t) => setForm((p) => ({ ...p, name: t }))} label="Full name" />
-      <CustomInput placeholder="Enter your email" value={form.email} onChangeText={(t) => setForm((p) => ({ ...p, email: t }))} label="Email" keyboardType="email-address" />
-      <CustomInput placeholder="Enter your password" value={form.password} onChangeText={(t) => setForm((p) => ({ ...p, password: t }))} label="Password" secureTextEntry />
-      <CustomButton title="Sign Up" isLoading={isSubmitting} onPress={submit} />
+      <CustomInput 
+        placeholder="Enter your full name" 
+        value={form.name} 
+        onChangeText={(t) => setForm((p) => ({ ...p, name: t }))} 
+        label="Full name" 
+      />
+      
+      <CustomInput 
+        placeholder="Enter your email" 
+        value={form.email} 
+        onChangeText={(t) => setForm((p) => ({ ...p, email: t.trim() }))} 
+        label="Email" 
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+      
+      <CustomInput 
+        placeholder="Enter your password" 
+        value={form.password} 
+        onChangeText={(t) => setForm((p) => ({ ...p, password: t }))} 
+        label="Password" 
+        secureTextEntry 
+      />
+      
+      <CustomButton 
+        title="Sign Up" 
+        isLoading={isSubmitting} 
+        onPress={submit} 
+      />
+      
       <View className="flex justify-center mt-5 flex-row gap-2">
         <Text className="base-regular text-gray-100">Already have an account?</Text>
-        <Text onPress={() => router.push('/sign-in')} className="base-bold text-primary"> Sign In</Text>
+        <Text 
+          onPress={() => router.push('/(auth)/sign-in')} 
+          className="base-bold text-primary"
+        >
+          Sign In
+        </Text>
       </View>
     </View>
   );

@@ -13,25 +13,59 @@ const SignIn = () => {
 
   const submit = async () => {
     const { email, password } = form;
-    if (!email || !password) return Alert.alert('Error', 'Please enter valid details');
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter valid details');
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
       const res = await login(email, password);
-      if (!res.ok) return Alert.alert('Error', res.message || 'Login failed');
-      router.replace('/');
+      if (!res.ok) {
+        Alert.alert('Error', res.message || 'Login failed');
+        return;
+      }
+      console.log('Login successful');
     } catch (error: any) {
       Alert.alert('Error', error?.message ?? 'Failed to login');
-    } finally { setIsSubmitting(false); }
+    } finally { 
+      setIsSubmitting(false); 
+    }
   };
 
   return (
     <View className="gap-10 bg-white rounded-lg p-5 mt-5">
-      <CustomInput placeholder="Enter your email" value={form.email} onChangeText={(text) => setForm((p) => ({ ...p, email: text }))} label="Email" keyboardType="email-address" />
-      <CustomInput placeholder="Enter your password" value={form.password} onChangeText={(text) => setForm((p) => ({ ...p, password: text }))} label="Password" secureTextEntry />
-      <CustomButton title="Sign-In" isLoading={isSubmitting} onPress={submit} />
+      <CustomInput 
+        placeholder="Enter your email" 
+        value={form.email} 
+        onChangeText={(text) => setForm((p) => ({ ...p, email: text.trim() }))} 
+        label="Email" 
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+      
+      <CustomInput 
+        placeholder="Enter your password" 
+        value={form.password} 
+        onChangeText={(text) => setForm((p) => ({ ...p, password: text }))} 
+        label="Password" 
+        secureTextEntry 
+      />
+      
+      <CustomButton 
+        title="Sign-In" 
+        isLoading={isSubmitting} 
+        onPress={submit} 
+      />
+      
       <View className='flex justify-center mt-5 flex-row gap-2'>
         <Text className="base-regular text-gray-100">Don't have an account?</Text>
-        <Text onPress={() => router.push('/sign-up')} className='base-bold text-primary'> Sign-Up</Text>
+        <Text 
+          onPress={() => router.push('/(auth)/sign-up')} 
+          className='base-bold text-primary'
+        >
+          Sign-Up
+        </Text>
       </View>
     </View>
   );
