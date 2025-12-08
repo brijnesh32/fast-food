@@ -1,37 +1,36 @@
+// app/(tabs)/search.tsx
 import CartButton from "@/components/CartButton";
 import Filter from "@/components/Filter";
 import MenuCard from "@/components/MenuCard";
 import SearchBar from "@/components/SearchBar";
 import { clearFoodCache, getCategories, getMenu } from "@/lib/api";
 import { MenuItem } from "@/type";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const Search = () => {
   const { category, query } = useLocalSearchParams<{query?: string; category?: string}>();
-  const [allItems, setAllItems] = useState<MenuItem[]>([]); // Store ALL items
-  const [displayItems, setDisplayItems] = useState<MenuItem[]>([]); // Items to display
+  const router = useRouter();
+  const [allItems, setAllItems] = useState<MenuItem[]>([]);
+  const [displayItems, setDisplayItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load data on first render
   useEffect(() => {
     const loadInitialData = async () => {
       setLoading(true);
       try {
         console.log('🚀 Initial data load...');
         const [menuData, categoriesData] = await Promise.all([
-          getMenu({ limit: 12 }), // Load all items once
+          getMenu({ limit: 12 }),
           getCategories()
         ]);
         
         console.log('✅ Initial data loaded:', menuData?.length || 0, 'items');
         
-        // Store ALL items separately
         setAllItems(Array.isArray(menuData) ? menuData : []);
-        // Initially display ALL items
         setDisplayItems(Array.isArray(menuData) ? menuData : []);
         setCategories(Array.isArray(categoriesData) ? categoriesData : []);
       } catch (error) {
@@ -42,25 +41,21 @@ const Search = () => {
     };
 
     loadInitialData();
-  }, []); // Empty dependency array - runs only once
+  }, []);
 
-  // Filter items locally when category or query changes
   useEffect(() => {
     if (allItems.length === 0) return;
     
     console.log('🔍 Applying local filters... Category:', category, 'Query:', query);
     
-    // Start with ALL items every time
     let filteredItems = [...allItems];
     
-    // Filter by category
     if (category && category !== 'all') {
       filteredItems = filteredItems.filter(item => 
         item.category?.id === category
       );
     }
     
-    // Filter by search query
     if (query) {
       filteredItems = filteredItems.filter(item => 
         item.name?.toLowerCase().includes(query.toLowerCase()) ||
@@ -68,29 +63,27 @@ const Search = () => {
       );
     }
     
-    // Apply limit
     const limit = 12;
     if (filteredItems.length > limit) {
       filteredItems = filteredItems.slice(0, limit);
     }
     
-    console.log('✅ Local filter applied:', filteredItems.length, 'items (out of', allItems.length, 'total)');
+    console.log('✅ Local filter applied:', filteredItems.length, 'items');
     setDisplayItems(filteredItems);
     
-  }, [category, query, allItems]); // Re-filter when these change
+  }, [category, query, allItems]);
 
   const handleRefresh = async () => {
     try {
       setLoading(true);
       console.log('🔄 Manually refreshing data...');
-      clearFoodCache(); // Clear cache
+      clearFoodCache();
       
       const [menuData, categoriesData] = await Promise.all([
         getMenu({ limit: 12 }),
         getCategories()
       ]);
       
-      // Update both arrays
       setAllItems(Array.isArray(menuData) ? menuData : []);
       setDisplayItems(Array.isArray(menuData) ? menuData : []);
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
@@ -100,8 +93,6 @@ const Search = () => {
       setLoading(false);
     }
   };
-
-  console.log('📊 Current state - All items:', allItems.length, 'Display items:', displayItems.length, 'Loading:', loading);
 
   if (loading && allItems.length === 0) {
     return (
@@ -114,7 +105,6 @@ const Search = () => {
 
   return (
     <SafeAreaView className="bg-white h-full">
-      {/* Status bar */}
       <View className="bg-blue-100 p-2 mx-5 mt-2 rounded-lg flex-row justify-between items-center">
         <Text className="text-blue-800 text-xs">
           Showing {displayItems.length} of {allItems.length} items 
@@ -131,12 +121,33 @@ const Search = () => {
         renderItem={({ item, index }) => {
           const isFirstRightColItem = index % 2 === 0;
           return (
-            <View 
+            <TouchableOpacity 
               key={item.id || `item-${index}`}
               className={isFirstRightColItem ? "flex-1 max-w-[48%] mt-0" : "flex-1 max-w-[48%] mt-10"}
+              onPress={() => {
+                router.push({
+                  pathname: '/(tabs)/product-details',
+                  params: {
+                    id: item.id,
+                    name: item.name,
+                    price: item.price.toString(),
+                    image: item.image,
+                    description: item.description,
+                    rating: item.rating?.toString() || '4.5',
+                    calories: item.calories?.toString() || '0',
+                    protein: item.protein?.toString() || '0',
+                    cookingTime: item.cooking_time || '15-20 mins',
+                    category: item.category?.name || 'Fast Food',
+                    isVeg: item.is_veg ? 'true' : 'false',
+                    ingredients: item.ingredients ? JSON.stringify(item.ingredients) : '[]',
+                    customizations: item.customizations ? JSON.stringify(item.customizations) : '[]'
+                  }
+                });
+              }}
+              activeOpacity={0.7}
             >
               <MenuCard item={item} />
-            </View>
+            </TouchableOpacity>
           );
         }}
         keyExtractor={(item: MenuItem) => item.id || `item-${item.name}`}

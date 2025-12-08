@@ -47,7 +47,8 @@
           "project": "react-native-food",
           "organization": "student-okn"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

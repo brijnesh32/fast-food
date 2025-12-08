@@ -1,11 +1,11 @@
-// components/MenuCard.tsx
-import { useCartStore } from "@/store/cart.store";
+// components/MenuCard.tsx - FIXED IMPORT
+import useCartStore from "@/store/cart.store"; // ✅ Changed from { useCartStore }
 import { MenuItem } from "@/type";
 import { useState } from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 
 const MenuCard = ({ item }: { item: MenuItem }) => {
-  const { addItem } = useCartStore();
+  const addItem = useCartStore((state) => state.addItem); // ✅ Use selector
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
@@ -21,7 +21,7 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
   // Handle image error
   const handleImageError = () => {
     setImageError(true);
-    setImageLoaded(true); // Stop loading state even if error
+    setImageLoaded(true);
   };
 
   return (

@@ -1,95 +1,140 @@
-import { CartCustomization, CartStore } from "@/type";
-import { create } from "zustand";
+// store/cart.store.ts - WORKING VERSION
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
-function areCustomizationsEqual(
-    a: CartCustomization[] = [],
-    b: CartCustomization[] = []
-): boolean {
-    if (a.length !== b.length) return false;
-
-    const aSorted = [...a].sort((x, y) => x.id.localeCompare(y.id));
-    const bSorted = [...b].sort((x, y) => x.id.localeCompare(y.id));
-
-    return aSorted.every((item, idx) => item.id === bSorted[idx].id);
+export interface CartItemType {
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
+  image_url?: string;
+  customizations?: string[];
 }
 
-export const useCartStore = create<CartStore>((set, get) => ({
-    items: [],
+interface CartState {
+  items: CartItemType[];
+  
+  // Actions
+  addItem: (item: Omit<CartItemType, 'quantity'>, quantity?: number) => void;
+  removeItem: (id: string, customizations?: string[]) => void;
+  increaseQty: (id: string, customizations?: string[]) => void;
+  decreaseQty: (id: string, customizations?: string[]) => void;
+  updateQuantity: (id: string, quantity: number, customizations?: string[]) => void;
+  clearCart: () => void;
+  getTotalItems: () => number;
+  getTotalPrice: () => number;
+  getItems: () => CartItemType[];
+}
 
-    addItem: (item) => {
-        const customizations = item.customizations ?? [];
+const useCartStore = create<CartState>()(
+  persist(
+    (set, get) => ({
+      items: [],
 
-        const existing = get().items.find(
-            (i) =>
-                i.id === item.id &&
-                areCustomizationsEqual(i.customizations ?? [], customizations)
-        );
+      addItem: (item, quantity = 1) => {
+        set((state) => {
+          const existingItem = state.items.find(i => 
+            i.id === item.id && 
+            JSON.stringify(i.customizations) === JSON.stringify(item.customizations)
+          );
+          
+          if (existingItem) {
+            return {
+              items: state.items.map(i => 
+                i.id === item.id && JSON.stringify(i.customizations) === JSON.stringify(item.customizations)
+                  ? { ...i, quantity: i.quantity + quantity }
+                  : i
+              )
+            };
+          } else {
+            return {
+              items: [...state.items, { ...item, quantity }]
+            };
+          }
+        });
+      },
 
-        if (existing) {
-            set({
-                items: get().items.map((i) =>
-                    i.id === item.id &&
-                    areCustomizationsEqual(i.customizations ?? [], customizations)
-                        ? { ...i, quantity: i.quantity + 1 }
-                        : i
-                ),
-            });
-        } else {
-            set({
-                items: [...get().items, { ...item, quantity: 1, customizations }],
-            });
+      removeItem: (id, customizations = []) => {
+        set((state) => ({
+          items: state.items.filter(i => 
+            !(i.id === id && JSON.stringify(i.customizations) === JSON.stringify(customizations))
+          )
+        }));
+      },
+
+      increaseQty: (id, customizations = []) => {
+        set((state) => ({
+          items: state.items.map(i => 
+            i.id === id && JSON.stringify(i.customizations) === JSON.stringify(customizations)
+              ? { ...i, quantity: i.quantity + 1 }
+              : i
+          )
+        }));
+      },
+
+      decreaseQty: (id, customizations = []) => {
+        set((state) => {
+          const item = state.items.find(i => 
+            i.id === id && JSON.stringify(i.customizations) === JSON.stringify(customizations)
+          );
+          
+          if (!item) return state;
+          
+          if (item.quantity > 1) {
+            return {
+              items: state.items.map(i => 
+                i.id === id && JSON.stringify(i.customizations) === JSON.stringify(customizations)
+                  ? { ...i, quantity: i.quantity - 1 }
+                  : i
+              )
+            };
+          } else {
+            return {
+              items: state.items.filter(i => 
+                !(i.id === id && JSON.stringify(i.customizations) === JSON.stringify(customizations))
+              )
+            };
+          }
+        });
+      },
+
+      updateQuantity: (id, quantity, customizations = []) => {
+        if (quantity < 1) {
+          get().removeItem(id, customizations);
+          return;
         }
-    },
 
-    removeItem: (id, customizations = []) => {
-        set({
-            items: get().items.filter(
-                (i) =>
-                    !(
-                        i.id === id &&
-                        areCustomizationsEqual(i.customizations ?? [], customizations)
-                    )
-            ),
-        });
-    },
+        set((state) => ({
+          items: state.items.map(i => 
+            i.id === id && JSON.stringify(i.customizations) === JSON.stringify(customizations)
+              ? { ...i, quantity }
+              : i
+          )
+        }));
+      },
 
-    increaseQty: (id, customizations = []) => {
-        set({
-            items: get().items.map((i) =>
-                i.id === id &&
-                areCustomizationsEqual(i.customizations ?? [], customizations)
-                    ? { ...i, quantity: i.quantity + 1 }
-                    : i
-            ),
-        });
-    },
+      clearCart: () => {
+        set({ items: [] });
+      },
 
-    decreaseQty: (id, customizations = []) => {
-        set({
-            items: get()
-                .items.map((i) =>
-                    i.id === id &&
-                    areCustomizationsEqual(i.customizations ?? [], customizations)
-                        ? { ...i, quantity: i.quantity - 1 }
-                        : i
-                )
-                .filter((i) => i.quantity > 0),
-        });
-    },
+      getTotalItems: () => {
+        return get().items.reduce((sum, item) => sum + item.quantity, 0);
+      },
 
-    clearCart: () => set({ items: [] }),
+      getTotalPrice: () => {
+        return get().items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      },
 
-    getTotalItems: () =>
-        get().items.reduce((total, item) => total + item.quantity, 0),
+      getItems: () => {
+        return get().items;
+      },
+    }),
+    {
+      name: 'cart-storage',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
 
-    getTotalPrice: () =>
-        get().items.reduce((total, item) => {
-            const base = item.price;
-            const customPrice =
-                item.customizations?.reduce(
-                    (s: number, c: CartCustomization) => s + c.price,
-                    0
-                ) ?? 0;
-            return total + item.quantity * (base + customPrice);
-        }, 0),
-}));
+export default useCartStore; // ✅ Default export

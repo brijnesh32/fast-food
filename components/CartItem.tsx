@@ -1,59 +1,64 @@
 // components/CartItem.tsx
-import { images } from "@/constants";
-import { API_BASE } from "@/lib/api";
-import { useCartStore } from "@/store/cart.store";
-import { CartItemType } from "@/type";
-import React from "react";
-import { Image, Text, TouchableOpacity, View } from "react-native";
+import { images } from '@/constants';
+import useCartStore from '@/store/cart.store';
+import { Image, Text, TouchableOpacity, View } from 'react-native';
 
-const resolveImage = (image_url?: string) => {
-  if (!image_url) return "";
-  if (image_url.startsWith("http")) return image_url;
-  return API_BASE.replace("/api", "") + image_url;
-};
-
-const CartItem = ({ item }: { item: CartItemType }) => {
-  const increaseQty = useCartStore((s) => s.increaseQty);
-  const decreaseQty = useCartStore((s) => s.decreaseQty);
-  const removeItem = useCartStore((s) => s.removeItem);
+const CartItem = ({ item }: { item: any }) => {
+  const { increaseQty, decreaseQty, removeItem } = useCartStore();
 
   return (
-    <View className="cart-item">
-      <View className="flex flex-row items-center gap-x-3">
-        <View className="cart-item__image">
-          <Image
-            source={{ uri: resolveImage(item.image_url) }}
-            className="size-4/5 rounded-lg"
-            resizeMode="cover"
-          />
-        </View>
-
-        <View className="flex-1">
-          <Text className="base-bold text-dark-100">{item.name}</Text>
-          <Text className="paragraph-bold text-primary mt-1">${item.price}</Text>
-
-          <View className="flex flex-row items-center gap-x-4 mt-2">
+    <View className="flex-row items-center bg-white border border-gray-200 rounded-2xl p-4 mb-4">
+      <Image
+        source={item.image_url ? { uri: item.image_url } : images.burger}
+        className="w-20 h-20 rounded-xl"
+        resizeMode="cover"
+      />
+      
+      <View className="flex-1 ml-4">
+        <Text className="text-lg font-bold text-dark-100 mb-1">{item.name}</Text>
+        
+        {item.customizations && item.customizations.length > 0 && (
+          <Text className="text-gray-500 text-sm mb-2">
+            {item.customizations.join(', ')}
+          </Text>
+        )}
+        
+        <Text className="text-primary font-bold text-lg mb-3">
+          ${item.price.toFixed(2)}
+        </Text>
+        
+        <View className="flex-row items-center justify-between">
+          <View className="flex-row items-center gap-3">
             <TouchableOpacity
-              onPress={() => decreaseQty(item.id, item.customizations ?? [])}
-              className="cart-item__actions"
+              onPress={() => decreaseQty(item.id, item.customizations || [])}
+              className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
             >
-              <Image source={images.minus} className="size-1/2" resizeMode="contain" />
+              <Text className="text-gray-700 font-bold text-lg">-</Text>
             </TouchableOpacity>
-
-            <Text className="base-bold text-dark-100">{item.quantity}</Text>
-
+            
+            <Text className="text-lg font-semibold min-w-[30px] text-center">
+              {item.quantity}
+            </Text>
+            
             <TouchableOpacity
-              onPress={() => increaseQty(item.id, item.customizations ?? [])}
-              className="cart-item__actions"
+              onPress={() => increaseQty(item.id, item.customizations || [])}
+              className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
             >
-              <Image source={images.plus} className="size-1/2" resizeMode="contain" />
+              <Text className="text-gray-700 font-bold text-lg">+</Text>
             </TouchableOpacity>
           </View>
+          
+          <Text className="text-dark-100 font-semibold">
+            ${(item.price * item.quantity).toFixed(2)}
+          </Text>
         </View>
       </View>
-
-      <TouchableOpacity onPress={() => removeItem(item.id, item.customizations ?? [])} className="flex-center">
-        <Image source={images.trash} className="size-5" resizeMode="contain" />
+      
+      <TouchableOpacity
+        onPress={() => removeItem(item.id, item.customizations || [])}
+        className="ml-2 p-2"
+      >
+        <Text className="text-red-500 text-lg">×</Text>
       </TouchableOpacity>
     </View>
   );

@@ -3,7 +3,7 @@ import CustomButton from "@/components/CustomButton";
 import CustomHeader from "@/components/CustomHeader";
 import { djangoApi } from "@/lib/api";
 import useAuthStore from "@/store/auth.store";
-import { useCartStore } from "@/store/cart.store";
+import useCartStore from "@/store/cart.store";
 import { useState } from 'react';
 import { Alert, FlatList, Text, View } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
