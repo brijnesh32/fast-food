@@ -40,6 +40,21 @@ import pizzaOne from "@/assets/images/pizza-one.png";
 import salad from "@/assets/images/salad.png";
 import success from "@/assets/images/success.png";
 import tomatoes from "@/assets/images/tomatoes.png";
+// Add these lines to your existing type file
+export type PaymentMethod = 'upi' | 'cards' | 'cod';
+
+export interface PaymentParams {
+  total: string;
+  itemsCount: string;
+}
+
+export interface PaymentOption {
+  id: PaymentMethod;
+  name: string;
+  icon: string;
+  description: string;
+  color: string;
+}
 
 export const CATEGORIES = [
     {

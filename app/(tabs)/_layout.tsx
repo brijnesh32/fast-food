@@ -20,10 +20,15 @@ export default function TabLayout() {
     if(!isAuthenticated) return <Redirect href="/sign-in" />
 
     return (
-        <Tabs screenOptions={{
+        <Tabs
+            screenOptions={({ route }) => ({
                 headerShown: false,
                 tabBarShowLabel: false,
+                // HIDE TAB BAR FOR PAYMENT AND PRODUCT-DETAILS
                 tabBarStyle: {
+                    // Hide tab bar for these screens
+                    display: ['payment', 'product-details'].includes(route.name) ? 'none' : 'flex',
+                    // ... rest of your tab bar styles
                     borderTopLeftRadius: 50,
                     borderTopRightRadius: 50,
                     borderBottomLeftRadius: 50,
@@ -39,7 +44,9 @@ export default function TabLayout() {
                     shadowRadius: 4,
                     elevation: 5
                 }
-            }}>
+            })}
+        >
+            {/* ONLY 4 MAIN TABS */}
             <Tabs.Screen
                 name='index'
                 options={{
@@ -68,13 +75,20 @@ export default function TabLayout() {
                     tabBarIcon: ({ focused }) => <TabBarIcon title="Profile" icon={images.person} focused={focused} />
                 }}
             />
+            
+            {/* HIDDEN SCREENS - NO TAB BAR OPTION + TAB BAR HIDDEN */}
+            <Tabs.Screen
+                name='payment'
+                options={{
+                    href: null, // NO option in tab bar
+                }}
+            />
             <Tabs.Screen
                 name='product-details'
                 options={{
-                    href: null, // This hides it from the tab bar
+                    href: null, // NO option in tab bar
                 }}
             />
         </Tabs>
-        
     );
 }

@@ -1,4 +1,3 @@
-// components/CustomInput.tsx
 import cn from 'clsx';
 import React, { useState } from 'react';
 import { Text, TextInput, TextInputProps, View } from 'react-native';
@@ -6,6 +5,7 @@ import { Text, TextInput, TextInputProps, View } from 'react-native';
 interface CustomInputProps extends TextInputProps {
   label?: string;
   error?: string;
+  containerClassName?: string; // Added this
 }
 
 const CustomInput = ({
@@ -17,12 +17,13 @@ const CustomInput = ({
   keyboardType = 'default',
   autoCapitalize = 'none',
   autoCorrect = false,
+  containerClassName = '', // Default empty
   ...props
 }: CustomInputProps) => {
   const [isFocused, setIsFocused] = useState(false);
   
   return (
-    <View className='w-full mb-5'>
+    <View className={`w-full mb-5 ${containerClassName}`}>
       {label && (
         <Text className='text-gray-700 text-sm font-semibold mb-2'>
           {label}
