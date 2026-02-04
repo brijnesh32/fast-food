@@ -18,7 +18,7 @@ const Cart = () => {
   const { items, getTotalItems, getTotalPrice } = useCartStore();
   const router = useRouter();
   const [deliveryOption, setDeliveryOption] = useState<'delivery' | 'dine-in'>('delivery');
-  
+
   const totalItems = getTotalItems();
   const totalPrice = getTotalPrice();
   const deliveryFee = deliveryOption === 'delivery' ? 5.00 : 0;
@@ -31,7 +31,7 @@ const Cart = () => {
       return;
     }
 
-    // Navigate to payment screen
+    // Navigate to payment screen with delivery option
     router.push({
       pathname: '/(tabs)/payment',
       params: {
@@ -68,7 +68,7 @@ const Cart = () => {
                     Delivery
                   </Text>
                 </TouchableOpacity>
-                
+
                 {/* Dine-in Button */}
                 <TouchableOpacity
                   className={`flex-1 py-3 rounded-xl ${deliveryOption === 'dine-in' ? 'bg-white shadow-sm' : ''}`}
@@ -86,23 +86,23 @@ const Cart = () => {
               <Text className="h3-bold text-dark-100 mb-5">Order Summary</Text>
 
               <PaymentInfoStripe label={`Total Items (${totalItems})`} value={`$${totalPrice.toFixed(2)}`} />
-              <PaymentInfoStripe 
-                label={`${deliveryOption === 'delivery' ? 'Delivery Fee' : 'Dine-in Fee'}`} 
-                value={deliveryOption === 'delivery' ? `$${deliveryFee.toFixed(2)}` : 'Free'} 
+              <PaymentInfoStripe
+                label={`${deliveryOption === 'delivery' ? 'Delivery Fee' : 'Dine-in Fee'}`}
+                value={deliveryOption === 'delivery' ? `$${deliveryFee.toFixed(2)}` : 'Free'}
               />
               <PaymentInfoStripe label={`Discount`} value={`- $${discount.toFixed(2)}`} valueStyle="!text-green-600" />
 
               <View className="border-t border-gray-300 my-2" />
-              <PaymentInfoStripe 
-                label={`Total Amount`} 
-                value={`$${totalAmount.toFixed(2)}`} 
-                labelStyle="base-bold !text-dark-100" 
-                valueStyle="base-bold !text-dark-100 !text-right" 
+              <PaymentInfoStripe
+                label={`Total Amount`}
+                value={`$${totalAmount.toFixed(2)}`}
+                labelStyle="base-bold !text-dark-100"
+                valueStyle="base-bold !text-dark-100 !text-right"
               />
             </View>
 
-            <CustomButton 
-              title={`Pay $${totalAmount.toFixed(2)}`}
+            <CustomButton
+              title={`${deliveryOption === 'delivery' ? 'Proceed to Delivery' : 'Proceed to Dine-in'} - $${totalAmount.toFixed(2)}`}
               onPress={handleOrderNow}
               isLoading={false}
             />
