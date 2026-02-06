@@ -1,4 +1,4 @@
-// app/(root)/profile.tsx
+// app/(tabs)/profile.tsx
 import CustomButton from "@/components/CustomButton";
 import CustomHeader from "@/components/CustomHeader";
 import { images } from "@/constants";
@@ -14,7 +14,21 @@ const Profile = () => {
 
   const handleLogout = async () => {
     await logout();
-    router.replace('/(auth)/sign-in');
+    router.replace("/(auth)/sign-in");
+  };
+
+  const handleViewOrders = () => {
+    // Navigate to view-order screen with mock order data
+    router.push({
+      pathname: "/(tabs)/view-order",
+      params: {
+        orderId: Math.floor(100000 + Math.random() * 900000),
+        total: "45.99",
+        deliveryOption: "delivery",
+        address: user?.address || "123 Main St, City Center",
+        phone: user?.phone || "+1 (555) 123-4567",
+      },
+    });
   };
 
   return (
@@ -51,20 +65,22 @@ const Profile = () => {
               {user?.email || "-"}
             </Text>
           </View>
-          
-          <View>
-            <Text className="text-sm text-gray-500 font-medium">Account ID</Text>
-            <Text className="text-lg text-dark-100 mt-1">
-              {user?.id ? user.id.substring(0, 8) + '...' : "-"}
-            </Text>
-          </View>
         </View>
 
-        {/* Only Logout button remains */}
+        {/* Your Orders Button */}
+        <CustomButton
+          title="Your Orders"
+          onPress={handleViewOrders}
+          style="mb-4 bg-primary border-2 border-primary py-4 rounded-xl"
+          textStyle="text-white text-lg font-semibold"
+        />
+
+        {/* Logout Button */}
         <CustomButton
           title="Logout"
           onPress={handleLogout}
-          
+          style="py-4 rounded-xl bg-primary border-2 border-primary"
+          textStyle="text-white text-lg font-semibold"
         />
 
         <View className="mt-12 items-center">

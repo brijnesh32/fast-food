@@ -11,12 +11,16 @@ const CustomHeader = ({ title }: CustomHeaderProps) => {
   return (
     <View className="custom-header">
       <TouchableOpacity onPress={() => router.back()}>
-        <Image source={images.arrowBack} className="size-5" resizeMode="contain" />
+        <Image
+          source={images.arrowBack}
+          className="size-5"
+          resizeMode="contain"
+        />
       </TouchableOpacity>
 
-      {title && <Text className="base-semibold text-dark-100">{title}</Text>}
-
-      <Image source={images.search} className="size-5" resizeMode="contain" />
+      {title && (
+        <Text className="base-semibold text-center text-dark-100">{title}</Text>
+      )}
     </View>
   );
 };
