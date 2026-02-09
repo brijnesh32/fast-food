@@ -37,9 +37,7 @@ export default function TabLayout() {
         // HIDE TAB BAR FOR PAYMENT AND PRODUCT-DETAILS
         tabBarStyle: {
           // Hide tab bar for these screens
-          display: ["payment", "product-details", "view-order"].includes(
-            route.name,
-          )
+          display: ["payment", "product-details"].includes(route.name)
             ? "none"
             : "flex",
           // ... rest of your tab bar styles
@@ -60,7 +58,7 @@ export default function TabLayout() {
         },
       })}
     >
-      {/* ONLY 4 MAIN TABS */}
+      {/* 5 MAIN TABS (including View Order) */}
       <Tabs.Screen
         name="index"
         options={{
@@ -89,6 +87,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="view-order"
+        options={{
+          title: "Orders",
+          tabBarIcon: ({ focused }) => (
+            <TabBarIcon title="Orders" icon={images.dinner} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
@@ -111,12 +118,6 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="product-details"
-        options={{
-          href: null, // NO option in tab bar
-        }}
-      />
-      <Tabs.Screen
-        name="view-order"
         options={{
           href: null, // NO option in tab bar
         }}

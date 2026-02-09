@@ -121,6 +121,29 @@ const Search = () => {
 
   return (
     <SafeAreaView className="bg-white h-full">
+      {/* Fixed Header Section */}
+      <View className="bg-white pt-6 pb-5 px-5">
+        <View className="flex-row justify-between items-center w-full mb-4">
+          <View>
+            <Text className="text-sm font-bold uppercase text-primary">
+              Search
+            </Text>
+            <View className="flex-row gap-x-1 mt-1">
+              <Text className="text-base font-semibold text-dark-100">
+                {query
+                  ? `Search results for "${query}"`
+                  : "Find your favorite food"}
+              </Text>
+            </View>
+          </View>
+          <CartButton />
+        </View>
+
+        <SearchBar />
+        <Filter categories={categories} />
+      </View>
+
+      {/* Scrollable Food Items Grid */}
       <FlatList
         data={displayItems}
         renderItem={({ item, index }) => {
@@ -154,7 +177,6 @@ const Search = () => {
                     customizations: item.customizations
                       ? JSON.stringify(item.customizations)
                       : "[]",
-                    // Optional: Pass category ID as well
                     categoryId: item.category?.id || "",
                   },
                 });
@@ -169,26 +191,7 @@ const Search = () => {
         numColumns={2}
         columnWrapperClassName="gap-4 justify-between"
         contentContainerClassName="gap-4 px-5 pb-32"
-        ListHeaderComponent={
-          <View className="my-5 gap-5">
-            <View className="flex-row justify-between items-center w-full">
-              <View>
-                <Text className="text-sm font-bold uppercase text-primary">
-                  Search
-                </Text>
-                <View className="flex-row gap-x-1 mt-1">
-                  <Text className="text-base font-semibold text-dark-100">
-                    Find your favorite food
-                  </Text>
-                </View>
-              </View>
-              <CartButton />
-            </View>
-
-            <SearchBar />
-            <Filter categories={categories} />
-          </View>
-        }
+        showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View className="py-10">
             <Text className="text-center text-gray-500 text-lg">
