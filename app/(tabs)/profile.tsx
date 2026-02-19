@@ -17,18 +17,9 @@ const Profile = () => {
     router.replace("/(auth)/sign-in");
   };
 
-  const handleViewOrders = () => {
-    // Navigate to view-order screen with mock order data
-    router.push({
-      pathname: "/(tabs)/view-order",
-      params: {
-        orderId: Math.floor(100000 + Math.random() * 900000),
-        total: "45.99",
-        deliveryOption: "delivery",
-        address: user?.address || "123 Main St, City Center",
-        phone: user?.phone || "+1 (555) 123-4567",
-      },
-    });
+  const handleOrderHistory = () => {
+    // Navigate to order-history screen
+    router.push("/(tabs)/order-history");
   };
 
   return (
@@ -67,10 +58,10 @@ const Profile = () => {
           </View>
         </View>
 
-        {/* Your Orders Button */}
+        {/* Order History Button */}
         <CustomButton
-          title="Your Orders"
-          onPress={handleViewOrders}
+          title="Order History"
+          onPress={handleOrderHistory}
           style="mb-4 bg-primary border-2 border-primary py-4 rounded-xl"
           textStyle="text-white text-lg font-semibold"
         />

@@ -37,7 +37,9 @@ export default function TabLayout() {
         // HIDE TAB BAR FOR PAYMENT AND PRODUCT-DETAILS
         tabBarStyle: {
           // Hide tab bar for these screens
-          display: ["payment", "product-details"].includes(route.name)
+          display: ["payment", "product-details", "order-history"].includes(
+            route.name,
+          )
             ? "none"
             : "flex",
           // ... rest of your tab bar styles
@@ -122,6 +124,7 @@ export default function TabLayout() {
           href: null, // NO option in tab bar
         }}
       />
+      <Tabs.Screen name="order-history" options={{ href: null }} />
     </Tabs>
   );
 }

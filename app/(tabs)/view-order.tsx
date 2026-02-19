@@ -1,4 +1,5 @@
-// app/(tabs)/view-order.tsx
+// app/(tabs)/view-order.tsx (Updated Order Tracking Section)
+import CustomHeader from "@/components/CustomHeader";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
@@ -137,13 +138,6 @@ const ViewOrder = () => {
     ]);
   };
 
-  const handleContactSupport = () => {
-    Alert.alert(
-      "Contact Support",
-      "Call: +1 (800) 123-4567\nEmail: support@example.com",
-    );
-  };
-
   const handleTrackOrder = () => {
     // In real app, this would open tracking map
     Alert.alert(
@@ -168,20 +162,12 @@ const ViewOrder = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="px-5 pt-6 pb-4 bg-white border-b border-gray-200">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="w-10 h-10 justify-center"
-        >
-          <Text className="text-2xl text-gray-800">←</Text>
-        </TouchableOpacity>
+      {/* Header with CustomHeader */}
+      <CustomHeader title="Order Details" />
 
-        <Text className="text-3xl font-bold text-primary mt-3">
-          Order Details
-        </Text>
-
-        <View className="flex-row justify-between items-center mt-4">
+      <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
+        {/* Order ID and Status */}
+        <View className="flex-row justify-between items-center mt-4 mb-6">
           <View>
             <Text className="text-gray-600 text-base">Order ID</Text>
             <Text className="text-lg font-semibold text-gray-900">
@@ -197,12 +183,10 @@ const ViewOrder = () => {
           </View>
         </View>
 
-        <Text className="text-gray-500 text-sm mt-2">
+        <Text className="text-gray-500 text-sm mb-6">
           {orderDetails.orderDate}
         </Text>
-      </View>
 
-      <ScrollView className="px-5 mt-5" showsVerticalScrollIndicator={false}>
         {/* Order Tracking */}
         <View className="bg-white rounded-2xl p-6 mb-6 shadow-sm border border-gray-100">
           <Text className="text-2xl font-bold text-gray-900 mb-6">
@@ -244,6 +228,7 @@ const ViewOrder = () => {
             ))}
           </View>
 
+          {/* Track Delivery Button */}
           <TouchableOpacity
             onPress={handleTrackOrder}
             className="mt-8 py-3 bg-primary rounded-xl"
@@ -254,6 +239,19 @@ const ViewOrder = () => {
                 : "View Preparation Status"}
             </Text>
           </TouchableOpacity>
+
+          {/* Cancel Order Button - Only shown when order can be cancelled */}
+          {(orderDetails.status === "pending" ||
+            orderDetails.status === "preparing") && (
+            <TouchableOpacity
+              onPress={handleCancelOrder}
+              className="mt-4 py-4 bg-red-600 rounded-xl"
+            >
+              <Text className="text-white text-center text-lg font-semibold">
+                Cancel Order
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Order Items */}
@@ -361,7 +359,7 @@ const ViewOrder = () => {
         </View>
 
         {/* Payment Method */}
-        <View className="bg-white rounded-2xl p-6 mb-28 shadow-sm border border-gray-100">
+        <View className="bg-white rounded-2xl p-6 mb-6 shadow-sm border border-gray-100">
           <Text className="text-2xl font-bold text-gray-900 mb-6">
             Payment Method
           </Text>
@@ -373,42 +371,10 @@ const ViewOrder = () => {
             <Text className="text-gray-500 text-sm mt-1">Pay at doorstep</Text>
           </View>
         </View>
+
+        {/* Extra bottom padding for comfortable scrolling */}
+        <View className="h-10" />
       </ScrollView>
-
-      {/* Bottom Actions */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white pt-5 px-5 pb-8 border-t border-gray-200 shadow-lg">
-        <View className="flex-row gap-3">
-          <TouchableOpacity
-            onPress={handleContactSupport}
-            className="flex-1 py-4 border-2 border-primary rounded-xl"
-          >
-            <Text className="text-primary text-center text-lg font-semibold">
-              Contact Support
-            </Text>
-          </TouchableOpacity>
-
-          {orderDetails.status === "pending" ||
-          orderDetails.status === "preparing" ? (
-            <TouchableOpacity
-              onPress={handleCancelOrder}
-              className="flex-1 py-4 bg-red-600 rounded-xl"
-            >
-              <Text className="text-white text-center text-lg font-semibold">
-                Cancel Order
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              onPress={() => router.push("/(tabs)")}
-              className="flex-1 py-4 bg-primary rounded-xl"
-            >
-              <Text className="text-white text-center text-lg font-semibold">
-                Back to Home
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
     </SafeAreaView>
   );
 };
