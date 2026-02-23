@@ -1,4 +1,4 @@
-// app/(tabs)/search.tsx
+// app/(tabs)/search.tsx - OPTIMIZED WITH IMAGE PRELOADING
 import CartButton from "@/components/CartButton";
 import Filter from "@/components/Filter";
 import MenuCard from "@/components/MenuCard";
@@ -6,15 +6,30 @@ import SearchBar from "@/components/SearchBar";
 import { clearFoodCache, getCategories, getMenu } from "@/lib/api";
 import { MenuItem } from "@/type";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+// Helper function to preload images
+const preloadImages = (items: any[], count: number = 6) => {
+  const imagesToLoad = items
+    .slice(0, count)
+    .map((item) => item.image_url || item.image)
+    .filter((url) => url && typeof url === "string");
+
+  imagesToLoad.forEach((url) => {
+    Image.prefetch(url);
+  });
+
+  console.log(`🖼️ Preloaded ${imagesToLoad.length} images`);
+};
 
 const Search = () => {
   const { category, query } = useLocalSearchParams<{
@@ -27,6 +42,7 @@ const Search = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Load initial data
   useEffect(() => {
     const loadInitialData = async () => {
       setLoading(true);
@@ -42,6 +58,11 @@ const Search = () => {
         setAllItems(Array.isArray(menuData) ? menuData : []);
         setDisplayItems(Array.isArray(menuData) ? menuData : []);
         setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+
+        // 🚀 PRELOAD FIRST 6 IMAGES
+        if (menuData && menuData.length > 0) {
+          preloadImages(menuData, 6);
+        }
       } catch (error) {
         console.log("❌ Error in loadInitialData:", error);
       } finally {
@@ -52,6 +73,7 @@ const Search = () => {
     loadInitialData();
   }, []);
 
+  // Filter items when category or query changes
   useEffect(() => {
     if (allItems.length === 0) return;
 
@@ -87,6 +109,11 @@ const Search = () => {
 
     console.log("✅ Local filter applied:", filteredItems.length, "items");
     setDisplayItems(filteredItems);
+
+    // 🚀 PRELOAD FILTERED IMAGES
+    if (filteredItems.length > 0) {
+      preloadImages(filteredItems, 6);
+    }
   }, [category, query, allItems]);
 
   const handleRefresh = async () => {
@@ -103,6 +130,11 @@ const Search = () => {
       setAllItems(Array.isArray(menuData) ? menuData : []);
       setDisplayItems(Array.isArray(menuData) ? menuData : []);
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+
+      // 🚀 PRELOAD ON REFRESH
+      if (menuData && menuData.length > 0) {
+        preloadImages(menuData, 6);
+      }
     } catch (error) {
       console.log("❌ Refresh error:", error);
     } finally {
@@ -110,11 +142,57 @@ const Search = () => {
     }
   };
 
+  // Memoized render function for better performance
+  const renderItem = useCallback(
+    ({ item, index }: { item: MenuItem; index: number }) => {
+      const isFirstRightColItem = index % 2 === 0;
+      return (
+        <TouchableOpacity
+          key={item.id || `item-${index}`}
+          className={
+            isFirstRightColItem
+              ? "flex-1 max-w-[48%] mt-0"
+              : "flex-1 max-w-[48%] mt-10"
+          }
+          onPress={() => {
+            router.push({
+              pathname: "/(tabs)/product-details",
+              params: {
+                id: item.id,
+                name: item.name,
+                price: item.price?.toString() || "0",
+                image: item.image,
+                description: item.description,
+                rating: item.rating?.toString() || "4.5",
+                calories: item.calories?.toString() || "0",
+                protein: item.protein?.toString() || "0",
+                cookingTime: item.cooking_time || "15-20 mins",
+                category: item.category?.name || "Fast Food",
+                isVeg: item.is_veg ? "true" : "false",
+                ingredients: item.ingredients
+                  ? JSON.stringify(item.ingredients)
+                  : "[]",
+                customizations: item.customizations
+                  ? JSON.stringify(item.customizations)
+                  : "[]",
+                categoryId: item.category?.id || "",
+              },
+            });
+          }}
+          activeOpacity={0.7}
+        >
+          <MenuCard item={item} />
+        </TouchableOpacity>
+      );
+    },
+    [],
+  );
+
   if (loading && allItems.length === 0) {
     return (
       <SafeAreaView className="bg-white h-full justify-center items-center">
-        <ActivityIndicator size="large" color="#0000ff" />
-        <Text className="mt-4 text-lg">Loading menu...</Text>
+        <ActivityIndicator size="large" color="#FE8C00" />
+        <Text className="mt-4 text-lg">Loading delicious food...</Text>
       </SafeAreaView>
     );
   }
@@ -146,52 +224,16 @@ const Search = () => {
       {/* Scrollable Food Items Grid */}
       <FlatList
         data={displayItems}
-        renderItem={({ item, index }) => {
-          const isFirstRightColItem = index % 2 === 0;
-          return (
-            <TouchableOpacity
-              key={item.id || `item-${index}`}
-              className={
-                isFirstRightColItem
-                  ? "flex-1 max-w-[48%] mt-0"
-                  : "flex-1 max-w-[48%] mt-10"
-              }
-              onPress={() => {
-                router.push({
-                  pathname: "/(tabs)/product-details",
-                  params: {
-                    id: item.id,
-                    name: item.name,
-                    price: item.price?.toString() || "0",
-                    image: item.image,
-                    description: item.description,
-                    rating: item.rating?.toString() || "4.5",
-                    calories: item.calories?.toString() || "0",
-                    protein: item.protein?.toString() || "0",
-                    cookingTime: item.cooking_time || "15-20 mins",
-                    category: item.category?.name || "Fast Food",
-                    isVeg: item.is_veg ? "true" : "false",
-                    ingredients: item.ingredients
-                      ? JSON.stringify(item.ingredients)
-                      : "[]",
-                    customizations: item.customizations
-                      ? JSON.stringify(item.customizations)
-                      : "[]",
-                    categoryId: item.category?.id || "",
-                  },
-                });
-              }}
-              activeOpacity={0.7}
-            >
-              <MenuCard item={item} />
-            </TouchableOpacity>
-          );
-        }}
+        renderItem={renderItem}
         keyExtractor={(item: MenuItem) => item.id || `item-${item.name}`}
         numColumns={2}
         columnWrapperClassName="gap-4 justify-between"
         contentContainerClassName="gap-4 px-5 pb-32"
         showsVerticalScrollIndicator={false}
+        initialNumToRender={4}
+        maxToRenderPerBatch={6}
+        windowSize={5}
+        removeClippedSubviews={true}
         ListEmptyComponent={
           <View className="py-10">
             <Text className="text-center text-gray-500 text-lg">

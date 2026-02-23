@@ -1,7 +1,7 @@
 // components/CartItem.tsx - WITH PLUS/MINUS ICONS
-import { images } from '@/constants';
-import useCartStore from '@/store/cart.store';
-import { Image, Text, TouchableOpacity, View } from 'react-native';
+import { images } from "@/constants";
+import useCartStore from "@/store/cart.store";
+import { Image, Text, TouchableOpacity, View } from "react-native";
 
 const CartItem = ({ item }: { item: any }) => {
   const { increaseQty, decreaseQty, removeItem } = useCartStore();
@@ -13,20 +13,22 @@ const CartItem = ({ item }: { item: any }) => {
         className="w-20 h-20 rounded-xl"
         resizeMode="cover"
       />
-      
+
       <View className="flex-1 ml-4">
-        <Text className="text-lg font-bold text-dark-100 mb-1">{item.name}</Text>
-        
+        <Text className="text-lg font-bold text-dark-100 mb-1">
+          {item.name}
+        </Text>
+
         {item.customizations && item.customizations.length > 0 && (
           <Text className="text-gray-500 text-sm mb-2">
-            {item.customizations.join(', ')}
+            {item.customizations.join(", ")}
           </Text>
         )}
-        
+
         <Text className="text-primary font-bold text-lg mb-3">
           ${item.price.toFixed(2)}
         </Text>
-        
+
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-3">
             {/* Minus Button with Icon */}
@@ -39,17 +41,16 @@ const CartItem = ({ item }: { item: any }) => {
                   source={images.minus}
                   className="w-4 h-4"
                   resizeMode="contain"
-                  
                 />
               ) : (
                 <Text className="text-gray-700 font-bold text-lg">-</Text>
               )}
             </TouchableOpacity>
-            
+
             <Text className="text-lg font-semibold min-w-[30px] text-center">
               {item.quantity}
             </Text>
-            
+
             {/* Plus Button with Icon */}
             <TouchableOpacity
               onPress={() => increaseQty(item.id, item.customizations || [])}
@@ -67,13 +68,13 @@ const CartItem = ({ item }: { item: any }) => {
               )}
             </TouchableOpacity>
           </View>
-          
+
           <Text className="text-dark-100 font-semibold">
             ${(item.price * item.quantity).toFixed(2)}
           </Text>
         </View>
       </View>
-      
+
       {/* Trash Button with Icon */}
       <TouchableOpacity
         onPress={() => removeItem(item.id, item.customizations || [])}

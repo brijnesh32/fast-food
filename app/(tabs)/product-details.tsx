@@ -1,10 +1,17 @@
-// app/(tabs)/product-details.tsx - CORRECTED VERSION
+// app/(tabs)/product-details.tsx - OPTIMIZED
 import CartButton from "@/components/CartButton";
 import { images } from "@/constants";
 import useCartStore from "@/store/cart.store";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const ProductDetails = () => {
@@ -12,7 +19,7 @@ const ProductDetails = () => {
   const params = useLocalSearchParams();
   const addItem = useCartStore((state) => state.addItem);
   const items = useCartStore((state) => state.items);
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [isInCart, setIsInCart] = useState(false);
@@ -39,6 +46,13 @@ const ProductDetails = () => {
       ? JSON.parse(params.customizations as string)
       : [],
   };
+
+  // Preload image on mount
+  useEffect(() => {
+    if (foodItem.image && typeof foodItem.image === "string") {
+      Image.prefetch(foodItem.image);
+    }
+  }, [foodItem.image]);
 
   // Check if item is already in cart
   useEffect(() => {
@@ -113,21 +127,40 @@ const ProductDetails = () => {
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Smaller Product Image */}
+        {/* Product Image with Loading State */}
         <View className="items-center px-5 mt-3">
-          <Image
-            source={
-              typeof foodItem.image === "string"
-                ? { uri: foodItem.image }
-                : foodItem.image
-            }
-            className="w-64 h-64 rounded-2xl"
-            resizeMode="contain"
-            onLoad={() => setImageLoaded(true)}
-            onError={() => setImageError(true)}
-          />
+          <View className="w-64 h-64 rounded-2xl relative overflow-hidden bg-gray-100">
+            {imageLoading && !imageError && (
+              <View className="absolute inset-0 items-center justify-center z-10">
+                <ActivityIndicator size="large" color="#FE8C00" />
+              </View>
+            )}
+            <Image
+              source={
+                typeof foodItem.image === "string"
+                  ? { uri: foodItem.image }
+                  : foodItem.image
+              }
+              className="w-64 h-64 rounded-2xl"
+              style={{ opacity: imageLoading ? 0 : 1 }}
+              resizeMode="contain"
+              onLoadStart={() => setImageLoading(true)}
+              onLoad={() => setImageLoading(false)}
+              onError={() => {
+                setImageError(true);
+                setImageLoading(false);
+              }}
+              fadeDuration={300}
+            />
+            {imageError && (
+              <View className="absolute inset-0 items-center justify-center">
+                <Text className="text-gray-400">Image not available</Text>
+              </View>
+            )}
+          </View>
         </View>
 
+        {/* Rest of your component remains the same */}
         {/* Product Info */}
         <View className="px-5 mt-5">
           <View className="flex-row justify-between items-start">
@@ -164,7 +197,7 @@ const ProductDetails = () => {
           </View>
         </View>
 
-        {/* Quick Stats - 4 Columns like in image */}
+        {/* Quick Stats */}
         <View className="flex-row justify-between mx-5 mt-6 bg-gray-50 rounded-2xl p-4">
           <View className="items-center flex-1">
             <Text className="text-gray-500 text-sm">Calories</Text>
@@ -172,27 +205,21 @@ const ProductDetails = () => {
               {foodItem.calories} cal
             </Text>
           </View>
-
           <View className="h-8 w-px bg-gray-300" />
-
           <View className="items-center flex-1">
             <Text className="text-gray-500 text-sm">Protein</Text>
             <Text className="font-bold text-dark-100 text-lg mt-1">
               {foodItem.protein}g
             </Text>
           </View>
-
           <View className="h-8 w-px bg-gray-300" />
-
           <View className="items-center flex-1">
             <Text className="text-gray-500 text-sm">Time</Text>
             <Text className="font-bold text-dark-100 text-lg mt-1">
               {foodItem.cookingTime}
             </Text>
           </View>
-
           <View className="h-8 w-px bg-gray-300" />
-
           <View className="items-center flex-1">
             <Text className="text-gray-500 text-sm">Type</Text>
             <Text
@@ -213,7 +240,7 @@ const ProductDetails = () => {
           </Text>
         </View>
 
-        {/* Ingredients - If available */}
+        {/* Ingredients */}
         {foodItem.ingredients && foodItem.ingredients.length > 0 && (
           <View className="px-5 mt-6">
             <Text className="text-xl font-semibold text-dark-100 mb-3">
@@ -232,10 +259,9 @@ const ProductDetails = () => {
           </View>
         )}
 
-        {/* Add to Cart OR Quantity Selector */}
+        {/* Add to Cart */}
         <View className="px-5 mt-8 mb-32">
           {!isInCart ? (
-            // ITEM NOT IN CART: Show "Add to Cart" button
             <TouchableOpacity
               className="bg-primary py-4 rounded-xl items-center"
               onPress={handleAddToCart}
@@ -244,14 +270,12 @@ const ProductDetails = () => {
               <Text className="text-white font-bold text-lg">Add to Cart</Text>
             </TouchableOpacity>
           ) : (
-            // ITEM ALREADY IN CART: Show quantity selector
             <View className="bg-primary rounded-xl p-4">
               <View className="mb-3 items-center">
                 <Text className="text-white font-bold text-lg">
                   Already in Cart
                 </Text>
               </View>
-
               <View className="flex-row items-center justify-between mb-3">
                 <Text className="text-white font-bold text-lg">
                   Update Quantity
@@ -260,9 +284,7 @@ const ProductDetails = () => {
                   ${(foodItem.price * quantity).toFixed(2)}
                 </Text>
               </View>
-
               <View className="flex-row items-center justify-between">
-                {/* Minus Button */}
                 <TouchableOpacity
                   onPress={decreaseQuantity}
                   className={`w-12 h-12 rounded-full items-center justify-center ${
@@ -278,8 +300,6 @@ const ProductDetails = () => {
                     -
                   </Text>
                 </TouchableOpacity>
-
-                {/* Quantity Display */}
                 <View className="items-center">
                   <Text className="text-white text-2xl font-bold mb-1">
                     {quantity}
@@ -288,8 +308,6 @@ const ProductDetails = () => {
                     Current: {cartQuantity}
                   </Text>
                 </View>
-
-                {/* Plus Button */}
                 <TouchableOpacity
                   onPress={increaseQuantity}
                   className="w-12 h-12 rounded-full bg-white items-center justify-center"
@@ -297,8 +315,6 @@ const ProductDetails = () => {
                   <Text className="text-2xl font-bold text-primary">+</Text>
                 </TouchableOpacity>
               </View>
-
-              {/* Update Button */}
               <TouchableOpacity
                 className="mt-4 bg-white py-3 rounded-lg items-center"
                 onPress={handleAddToCart}
