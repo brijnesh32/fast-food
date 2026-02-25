@@ -1,18 +1,31 @@
-// app/(tabs)/order-history.tsx
+// app/(tabs)/order-history.tsx – Improved UI/UX
 import CustomHeader from "@/components/CustomHeader";
-import { images } from "@/constants";
+import { getMyOrders } from "@/lib/api";
+import useAuthStore from "@/store/auth.store";
+import { Feather } from "@expo/vector-icons"; // Ensure you have this installed
+import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
-import { FlatList, Image, Text, TouchableOpacity, View } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Define order status types
 type OrderStatus =
   | "pending"
+  | "confirmed"
   | "preparing"
+  | "ready"
   | "on-the-way"
   | "delivered"
-  | "cancelled";
+  | "cancelled"
+  | "completed";
 
 interface OrderItem {
   id: string;
@@ -24,160 +37,140 @@ interface OrderItem {
 
 interface Order {
   id: string;
+  order_number?: string;
   orderId: string;
   status: OrderStatus;
   orderDate: string;
   orderTime: string;
-  deliveryOption: "delivery" | "dine-in";
+  deliveryOption: "delivery" | "dine-in" | "takeaway";
   totalAmount: number;
   items: OrderItem[];
   restaurantName: string;
-  restaurantImage?: string;
   rating?: number;
+  created_at?: string;
+  delivery_address?: string;
+  user_phone?: string;
 }
 
 const OrderHistory = () => {
   const router = useRouter();
+  const { user, token } = useAuthStore();
 
-  // Mock order history data - in real app, fetch from API
-  const [orders, setOrders] = useState<Order[]>([
-    {
-      id: "1",
-      orderId: "#ORD-123456",
-      status: "delivered",
-      orderDate: "Today",
-      orderTime: "10:30 AM",
-      deliveryOption: "delivery",
-      totalAmount: 45.99,
-      restaurantName: "Pizza Palace",
-      restaurantImage: images.pizzaOne,
-      rating: 4.5,
-      items: [
-        { id: "1", name: "Margherita Pizza", quantity: 2, price: 12.99 },
-        { id: "2", name: "Garlic Bread", quantity: 1, price: 5.99 },
-      ],
-    },
-    {
-      id: "2",
-      orderId: "#ORD-123455",
-      status: "delivered",
-      orderDate: "Yesterday",
-      orderTime: "7:45 PM",
-      deliveryOption: "delivery",
-      totalAmount: 28.5,
-      restaurantName: "Burger King",
-      restaurantImage: images.burgerOne,
-      rating: 4.2,
-      items: [
-        { id: "3", name: "Classic Burger", quantity: 1, price: 14.99 },
-        { id: "4", name: "Fries", quantity: 1, price: 3.99 },
-      ],
-    },
-    {
-      id: "3",
-      orderId: "#ORD-123454",
-      status: "delivered",
-      orderDate: "Dec 24, 2024",
-      orderTime: "1:30 PM",
-      deliveryOption: "dine-in",
-      totalAmount: 35.75,
-      restaurantName: "Spice Garden",
-      restaurantImage: images.buritto,
-      rating: 4.8,
-      items: [
-        { id: "5", name: "Chicken Biryani", quantity: 2, price: 16.99 },
-        { id: "6", name: "Naan", quantity: 2, price: 3.99 },
-      ],
-    },
-    {
-      id: "4",
-      orderId: "#ORD-123453",
-      status: "cancelled",
-      orderDate: "Dec 22, 2024",
-      orderTime: "8:15 PM",
-      deliveryOption: "delivery",
-      totalAmount: 22.49,
-      restaurantName: "Healthy Bites",
-      restaurantImage: images.salad,
-      items: [
-        { id: "7", name: "Caesar Salad", quantity: 1, price: 12.99 },
-        { id: "8", name: "Garlic Bread", quantity: 1, price: 5.99 },
-      ],
-    },
-    {
-      id: "5",
-      orderId: "#ORD-123452",
-      status: "delivered",
-      orderDate: "Dec 20, 2024",
-      orderTime: "12:00 PM",
-      deliveryOption: "delivery",
-      totalAmount: 18.99,
-      restaurantName: "Taco Bell",
-      restaurantImage: images.buritto,
-      rating: 4.0,
-      items: [
-        { id: "9", name: "Crunchwrap Supreme", quantity: 1, price: 8.99 },
-        { id: "10", name: "Tacos", quantity: 2, price: 5.0 },
-      ],
-    },
-  ]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const [filter, setFilter] = useState<"all" | "delivered" | "cancelled">(
-    "all",
+  // Fetch orders from backend
+  const fetchOrders = async () => {
+    try {
+      if (token) {
+        const response = await getMyOrders(token);
+        console.log("✅ Real orders fetched:", response?.length || 0);
+
+        // Transform API response to match our Order interface
+        const transformedOrders = (response || []).map((order: any) => ({
+          id: order.id,
+          orderId: order.order_number || `#ORD-${order.id}`,
+          status: order.status || "pending",
+          orderDate: new Date(order.created_at).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          }),
+          orderTime: new Date(order.created_at).toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          deliveryOption: order.delivery_option || "delivery",
+          totalAmount: order.total_amount || 0,
+          items: order.items || [],
+          restaurantName: order.restaurant_name || "Restaurant",
+          rating: order.rating || null,
+          delivery_address: order.delivery_address,
+          user_phone: order.user_phone,
+        }));
+
+        setOrders(transformedOrders);
+      } else {
+        setOrders([]);
+      }
+    } catch (error) {
+      console.log("❌ Error fetching orders:", error);
+      setOrders([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    fetchOrders();
+  }, [token]);
+
+  // Refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (token) {
+        fetchOrders();
+      }
+    }, [token]),
   );
 
+  // Pull to refresh
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchOrders();
+  }, []);
+
+  // Filter orders to show only delivered, completed, and cancelled
+  const filteredOrders = orders.filter((order) =>
+    ["delivered", "completed", "cancelled"].includes(order.status),
+  );
+
+  const formatPrice = (price: number) => `₹${(price || 0).toFixed(2)}`;
+
   const getStatusColor = (status: OrderStatus) => {
-    switch (status) {
-      case "delivered":
-        return "bg-green-100";
-      case "cancelled":
-        return "bg-red-100";
-      case "pending":
-        return "bg-yellow-100";
-      case "preparing":
-        return "bg-blue-100";
-      case "on-the-way":
-        return "bg-purple-100";
-      default:
-        return "bg-gray-100";
-    }
+    const colors = {
+      pending: "bg-yellow-100",
+      confirmed: "bg-blue-100",
+      preparing: "bg-purple-100",
+      ready: "bg-indigo-100",
+      "on-the-way": "bg-orange-100",
+      delivered: "bg-green-100",
+      cancelled: "bg-red-100",
+      completed: "bg-gray-100",
+    };
+    return colors[status] || "bg-gray-100";
   };
 
   const getStatusTextColor = (status: OrderStatus) => {
-    switch (status) {
-      case "delivered":
-        return "text-green-800";
-      case "cancelled":
-        return "text-red-800";
-      case "pending":
-        return "text-yellow-800";
-      case "preparing":
-        return "text-blue-800";
-      case "on-the-way":
-        return "text-purple-800";
-      default:
-        return "text-gray-800";
-    }
+    const colors = {
+      pending: "text-yellow-800",
+      confirmed: "text-blue-800",
+      preparing: "text-purple-800",
+      ready: "text-indigo-800",
+      "on-the-way": "text-orange-800",
+      delivered: "text-green-800",
+      cancelled: "text-red-800",
+      completed: "text-gray-800",
+    };
+    return colors[status] || "text-gray-800";
   };
 
   const getStatusDisplayText = (status: OrderStatus) => {
-    switch (status) {
-      case "delivered":
-        return "Delivered";
-      case "cancelled":
-        return "Cancelled";
-      case "pending":
-        return "Pending";
-      case "preparing":
-        return "Preparing";
-      case "on-the-way":
-        return "On the Way";
-      default:
-        return "Unknown";
-    }
+    const texts = {
+      pending: "Pending",
+      confirmed: "Confirmed",
+      preparing: "Preparing",
+      ready: "Ready",
+      "on-the-way": "On the Way",
+      delivered: "Delivered",
+      cancelled: "Cancelled",
+      completed: "Completed",
+    };
+    return texts[status] || "Unknown";
   };
 
-  // FIXED: Navigate to view-order instead of order-details
   const handleViewOrderDetails = (order: Order) => {
     router.push({
       pathname: "/(tabs)/view-order",
@@ -187,79 +180,73 @@ const OrderHistory = () => {
         total: order.totalAmount.toString(),
         deliveryOption: order.deliveryOption,
         restaurantName: order.restaurantName,
-        address: "123 Main St, City Center",
-        phone: "+1 (555) 123-4567",
+        address: order.delivery_address || "Address not available",
+        phone: order.user_phone || user?.phone || "+91 98765 43210",
+        items: JSON.stringify(order.items),
       },
     });
   };
 
   const handleReorder = (order: Order) => {
-    // In real app, this would add items to cart
     router.push({
       pathname: "/(tabs)/cart",
-      params: {
-        reorder: order.id,
-      },
+      params: { reorder: order.id },
     });
   };
 
   const handleRateOrder = (order: Order) => {
-    // In real app, this would open rating modal
     console.log("Rate order:", order.id);
+    // TODO: Implement rating modal
   };
 
-  const filteredOrders = orders.filter((order) => {
-    if (filter === "all") return true;
-    return order.status === filter;
-  });
+  const getDeliveryIcon = (option: string) => {
+    switch (option) {
+      case "delivery":
+        return "truck";
+      case "dine-in":
+        return "users";
+      default:
+        return "package";
+    }
+  };
 
   const renderOrderItem = ({ item }: { item: Order }) => {
-    const itemCount = item.items.reduce((sum, i) => sum + i.quantity, 0);
-
     return (
       <TouchableOpacity
         onPress={() => handleViewOrderDetails(item)}
-        className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-gray-100"
+        className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-gray-100 active:opacity-80"
         activeOpacity={0.7}
       >
-        {/* Restaurant Header */}
-        <View className="flex-row items-center mb-4">
-          {/* Restaurant Image */}
-          <View className="w-16 h-16 rounded-2xl bg-gray-100 overflow-hidden mr-4">
-            {item.restaurantImage ? (
-              <Image
-                source={item.restaurantImage}
-                className="w-full h-full"
-                resizeMode="cover"
-              />
-            ) : (
-              <View className="w-full h-full items-center justify-center">
-                <Text className="text-2xl">🍽️</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Restaurant Info */}
-          <View className="flex-1">
-            <Text className="text-lg font-bold text-gray-900">
+        {/* Header with restaurant name, date and status */}
+        <View className="flex-row justify-between items-start mb-3">
+          <View className="flex-1 pr-3">
+            <Text className="text-xl font-bold text-gray-900">
               {item.restaurantName}
             </Text>
             <View className="flex-row items-center mt-1">
-              <Text className="text-gray-500 text-sm">
+              <Feather name="calendar" size={14} color="#9CA3AF" />
+              <Text className="text-gray-500 text-sm ml-1">
                 {item.orderDate} • {item.orderTime}
               </Text>
             </View>
             <View className="flex-row items-center mt-1">
-              <Text className="text-gray-500 text-sm">
+              <Feather
+                name={getDeliveryIcon(item.deliveryOption)}
+                size={14}
+                color="#9CA3AF"
+              />
+              <Text className="text-gray-500 text-sm ml-1">
                 {item.orderId} •{" "}
-                {item.deliveryOption === "delivery" ? "Delivery" : "Dine-in"}
+                {item.deliveryOption === "delivery"
+                  ? "Delivery"
+                  : item.deliveryOption === "dine-in"
+                    ? "Dine‑in"
+                    : "Takeaway"}
               </Text>
             </View>
           </View>
-
-          {/* Status Badge - Icons removed, only text */}
           <View
-            className={`px-3 py-1 rounded-full ${getStatusColor(item.status)}`}
+            className={`px-3 py-1.5 rounded-full ${getStatusColor(item.status)}`}
           >
             <Text
               className={`text-xs font-semibold ${getStatusTextColor(item.status)}`}
@@ -269,34 +256,35 @@ const OrderHistory = () => {
           </View>
         </View>
 
-        {/* Order Summary */}
+        {/* Order Items Summary */}
         <View className="mb-4">
-          <Text className="text-gray-700 font-medium mb-2">Items:</Text>
+          <Text className="text-gray-700 font-medium mb-2">Items</Text>
           <View className="space-y-1">
-            {item.items.slice(0, 2).map((foodItem) => (
-              <View key={foodItem.id} className="flex-row justify-between">
-                <Text className="text-gray-600">
+            {item.items.slice(0, 2).map((foodItem, index) => (
+              <View key={index} className="flex-row justify-between">
+                <Text className="text-gray-600 flex-1">
                   {foodItem.name} ×{foodItem.quantity}
                 </Text>
                 <Text className="text-gray-900 font-medium">
-                  ${(foodItem.price * foodItem.quantity).toFixed(2)}
+                  {formatPrice(foodItem.price * foodItem.quantity)}
                 </Text>
               </View>
             ))}
             {item.items.length > 2 && (
               <Text className="text-gray-500 text-sm">
-                +{item.items.length - 2} more items
+                +{item.items.length - 2} more item
+                {item.items.length - 2 > 1 ? "s" : ""}
               </Text>
             )}
           </View>
         </View>
 
-        {/* Order Footer */}
-        <View className="flex-row justify-between items-center pt-4 border-t border-gray-100">
+        {/* Footer with total and actions */}
+        <View className="flex-row justify-between items-center pt-4 border-t border-gray-200">
           <View>
-            <Text className="text-gray-600 text-sm">Total Amount</Text>
-            <Text className="text-xl font-bold text-primary">
-              ${item.totalAmount.toFixed(2)}
+            <Text className="text-gray-500 text-xs uppercase">Total</Text>
+            <Text className="text-2xl font-bold text-primary">
+              {formatPrice(item.totalAmount)}
             </Text>
           </View>
 
@@ -304,9 +292,9 @@ const OrderHistory = () => {
             {item.status === "delivered" && !item.rating && (
               <TouchableOpacity
                 onPress={() => handleRateOrder(item)}
-                className="px-4 py-2 bg-yellow-50 rounded-lg"
+                className="px-4 py-2 bg-yellow-50 rounded-xl border border-yellow-200"
               >
-                <Text className="text-yellow-600 font-medium text-sm">
+                <Text className="text-yellow-700 font-medium text-sm">
                   Rate
                 </Text>
               </TouchableOpacity>
@@ -315,7 +303,7 @@ const OrderHistory = () => {
             {item.status === "delivered" && (
               <TouchableOpacity
                 onPress={() => handleReorder(item)}
-                className="px-4 py-2 bg-primary/10 rounded-lg"
+                className="px-4 py-2 bg-primary/10 rounded-xl border border-primary/20"
               >
                 <Text className="text-primary font-medium text-sm">
                   Reorder
@@ -325,7 +313,7 @@ const OrderHistory = () => {
 
             <TouchableOpacity
               onPress={() => handleViewOrderDetails(item)}
-              className="px-4 py-2 bg-gray-100 rounded-lg"
+              className="px-4 py-2 bg-gray-100 rounded-xl"
             >
               <Text className="text-gray-700 font-medium text-sm">Details</Text>
             </TouchableOpacity>
@@ -334,8 +322,8 @@ const OrderHistory = () => {
 
         {/* Rating Display (if already rated) */}
         {item.rating && (
-          <View className="flex-row items-center mt-3 pt-3 border-t border-gray-100">
-            <Text className="text-yellow-500 text-lg">★</Text>
+          <View className="flex-row items-center mt-4 pt-4 border-t border-gray-100">
+            <Feather name="star" size={16} color="#F59E0B" />
             <Text className="text-gray-700 ml-1 font-medium">
               {item.rating.toFixed(1)}
             </Text>
@@ -348,74 +336,56 @@ const OrderHistory = () => {
     );
   };
 
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50">
+        <CustomHeader title="Order History" />
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#FE8C00" />
+          <Text className="mt-4 text-gray-500 font-medium">
+            Loading your orders...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Header with CustomHeader */}
       <CustomHeader title="Order History" />
 
-      {/* Filter Tabs */}
-      <View className="px-5 pt-4 pb-2 bg-white border-b border-gray-200">
-        <View className="flex-row gap-3">
-          <TouchableOpacity
-            onPress={() => setFilter("all")}
-            className={`px-4 py-2 rounded-full ${filter === "all" ? "bg-primary" : "bg-gray-100"}`}
-          >
-            <Text
-              className={`font-medium ${filter === "all" ? "text-white" : "text-gray-700"}`}
-            >
-              All Orders
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setFilter("delivered")}
-            className={`px-4 py-2 rounded-full ${filter === "delivered" ? "bg-primary" : "bg-gray-100"}`}
-          >
-            <Text
-              className={`font-medium ${filter === "delivered" ? "text-white" : "text-gray-700"}`}
-            >
-              Delivered
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setFilter("cancelled")}
-            className={`px-4 py-2 rounded-full ${filter === "cancelled" ? "bg-primary" : "bg-gray-100"}`}
-          >
-            <Text
-              className={`font-medium ${filter === "cancelled" ? "text-white" : "text-gray-700"}`}
-            >
-              Cancelled
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Orders List */}
       <FlatList
         data={filteredOrders}
         renderItem={renderOrderItem}
         keyExtractor={(item) => item.id}
-        contentContainerClassName="p-5"
+        contentContainerClassName="px-5 pb-8 pt-2"
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#FE8C00"
+          />
+        }
         ListEmptyComponent={
-          <View className="items-center justify-center py-20">
-            <Text className="text-6xl mb-4">📭</Text>
-            <Text className="text-xl font-semibold text-gray-900 mb-2">
-              No orders found
+          <View className="items-center justify-center py-20 px-6">
+            <View className="w-24 h-24 bg-gray-100 rounded-full items-center justify-center mb-6">
+              <Feather name="archive" size={40} color="#D1D5DB" />
+            </View>
+            <Text className="text-xl font-bold text-gray-900 mb-2">
+              No orders yet
             </Text>
-            <Text className="text-gray-500 text-center mb-6">
-              {filter === "all"
-                ? "You haven't placed any orders yet."
-                : filter === "delivered"
-                  ? "No delivered orders yet."
-                  : "No cancelled orders."}
+            <Text className="text-gray-500 text-center mb-8">
+              When you have delivered, completed, or cancelled orders, they will
+              appear here.
             </Text>
             <TouchableOpacity
               onPress={() => router.push("/(tabs)/search")}
-              className="bg-primary px-6 py-3 rounded-xl"
+              className="bg-primary px-8 py-4 rounded-xl shadow-md"
             >
-              <Text className="text-white font-semibold">Browse Menu</Text>
+              <Text className="text-white font-semibold text-lg">
+                Browse Menu
+              </Text>
             </TouchableOpacity>
           </View>
         }

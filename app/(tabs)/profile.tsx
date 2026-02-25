@@ -1,4 +1,4 @@
-// app/(tabs)/profile.tsx
+// app/(tabs)/profile.tsx – without seed button
 import CustomButton from "@/components/CustomButton";
 import CustomHeader from "@/components/CustomHeader";
 import { images } from "@/constants";
@@ -18,7 +18,6 @@ const Profile = () => {
   };
 
   const handleOrderHistory = () => {
-    // Navigate to order-history screen
     router.push("/(tabs)/order-history");
   };
 

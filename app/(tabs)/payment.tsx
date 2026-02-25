@@ -1,26 +1,22 @@
+// app/(tabs)/payment.tsx - FIXED VERSION
 import CustomButton from "@/components/CustomButton";
 import CustomInput from "@/components/CustomInput";
-import { images } from "@/constants";
+import useAuthStore from "@/store/auth.store";
+import useCartStore from "@/store/cart.store";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
-import {
-  Alert,
-  Image,
-  Modal,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const Payment = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { createOrder, getTotalPrice, getTotalItems } = useCartStore();
+  const { user, isAuthenticated } = useAuthStore();
 
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(user?.phone || "");
   const [address, setAddress] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [addressError, setAddressError] = useState("");
@@ -35,7 +31,7 @@ const Payment = () => {
   // Get delivery option from cart
   const deliveryOption =
     (params.deliveryOption as "delivery" | "dine-in") || "delivery";
-  const orderTotal = params.total ? parseFloat(params.total as string) : 0;
+  const orderTotal = getTotalPrice();
   const deliveryFee = deliveryOption === "delivery" ? 5 : 0;
   const discount = 0.5;
   const finalTotal = orderTotal + deliveryFee - discount;
@@ -77,6 +73,13 @@ const Payment = () => {
   const validateForm = () => {
     let valid = true;
 
+    // Check authentication
+    if (!isAuthenticated) {
+      Alert.alert("Login Required", "Please login to place order");
+      router.push("/(auth)/sign-in");
+      return false;
+    }
+
     // Phone validation (required for both)
     if (phone.length < 10) {
       setPhoneError("Enter valid 10-digit number");
@@ -112,9 +115,9 @@ const Payment = () => {
     return valid;
   };
 
-  const handleConfirmOrder = () => {
+  const handleConfirmOrder = async () => {
     if (!selectedPayment) {
-      Alert.alert("Payment required", "Select a payment method"); // Fixed: Using Alert.alert
+      Alert.alert("Payment required", "Select a payment method");
       return;
     }
 
@@ -122,15 +125,53 @@ const Payment = () => {
 
     setIsProcessing(true);
 
-    setTimeout(() => {
-      setIsProcessing(false);
-      setShowSuccessModal(true);
-    }, 1500);
-  };
+    try {
+      // Find selected restaurant details
+      const selectedRestaurant = restaurants.find((r) => r.id === restaurant);
 
-  const handleSuccessClose = () => {
-    setShowSuccessModal(false);
-    router.replace("/(tabs)");
+      // ✅ FIX: Prepare order details with ALL data
+      const orderDetails: any = {
+        phone: phone,
+        address: deliveryOption === "delivery" ? address : "",
+        paymentMethod: selectedPayment,
+        deliveryOption: deliveryOption,
+      };
+
+      // ✅ Add restaurant details for dine-in orders
+      if (deliveryOption === "dine-in" && selectedRestaurant) {
+        orderDetails.restaurantName = selectedRestaurant.name;
+        orderDetails.restaurantAddress = selectedRestaurant.address;
+        orderDetails.pincode = pincode;
+      }
+
+      console.log("📦 Sending to createOrder:", orderDetails); // Add this log
+
+      // Call the createOrder function from cart store
+      const result = await createOrder(orderDetails);
+
+      if (result.ok) {
+        // Navigate to view order with order details
+        router.push({
+          pathname: "/(tabs)/view-order",
+          params: {
+            orderId: result.orderId,
+            total: finalTotal.toFixed(2),
+            deliveryOption: deliveryOption,
+            address: address,
+            phone: phone,
+            restaurant: restaurant,
+            pincode: pincode,
+            paymentMethod: selectedPayment,
+          },
+        });
+      } else {
+        Alert.alert("Order Failed", result.message || "Something went wrong");
+      }
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Failed to place order");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const isButtonEnabled =
@@ -158,7 +199,7 @@ const Payment = () => {
             className={`px-4 py-2 rounded-full ${deliveryOption === "delivery" ? "bg-blue-50" : "bg-green-50"}`}
           >
             <Text
-              className={`text-base font-semibold ${deliveryOption === "delivery" ? " text-primary-700" : "text-green-700"}`}
+              className={`text-base font-semibold ${deliveryOption === "delivery" ? "text-blue-700" : "text-green-700"}`}
             >
               {deliveryOption === "delivery" ? "Home Delivery" : "Dine-in"}
             </Text>
@@ -358,22 +399,18 @@ const Payment = () => {
             </Text>
             <Text className="text-gray-500 text-sm mt-1">
               {deliveryFee > 0
-                ? `Includes $${deliveryFee} delivery fee`
+                ? `Includes ₹${deliveryFee} delivery fee`
                 : "No delivery fee"}
             </Text>
           </View>
           <Text className="text-3xl font-bold text-primary">
-            ${finalTotal.toFixed(2)}
+            ₹{finalTotal.toFixed(2)}
           </Text>
         </View>
 
         <View className={`${!isButtonEnabled ? "opacity-50" : ""}`}>
           <CustomButton
-            title={
-              deliveryOption === "delivery"
-                ? "Confirm Delivery Order"
-                : "Confirm Dine-in Order"
-            }
+            title="Place Order"
             onPress={handleConfirmOrder}
             isLoading={isProcessing}
             style={`py-4 rounded-xl ${isButtonEnabled ? "bg-primary" : "bg-gray-200"}`}
@@ -381,50 +418,6 @@ const Payment = () => {
           />
         </View>
       </View>
-
-      {/* Success Modal */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={showSuccessModal}
-        onRequestClose={handleSuccessClose}
-      >
-        <View className="flex-1 justify-center items-center bg-black/60">
-          <View className="bg-white rounded-3xl p-8 items-center w-4/5 max-w-sm">
-            {/* Success Checkmark Image */}
-            <Image
-              source={images.success} // Make sure this exists in your constants
-              className="w-24 h-24 mb-6"
-              resizeMode="contain"
-            />
-
-            {/* Success Title */}
-            <Text className="text-2xl font-bold text-gray-900 mb-3">
-              Order Confirmed
-            </Text>
-
-            {/* Order Successfully Message */}
-            <Text className="text-gray-600 text-center text-base mb-1">
-              Order booked successfully
-            </Text>
-
-            {/* Order ID (you can generate a real one if needed) */}
-            <Text className="text-gray-500 text-center text-sm mb-6">
-              Order ID: #{Math.floor(100000 + Math.random() * 900000)}
-            </Text>
-
-            {/* OK Button */}
-            <TouchableOpacity
-              onPress={handleSuccessClose}
-              className="bg-primary py-4 px-12 rounded-xl w-full"
-            >
-              <Text className="text-white text-lg font-semibold text-center">
-                OK
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 };

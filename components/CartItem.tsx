@@ -26,7 +26,7 @@ const CartItem = ({ item }: { item: any }) => {
         )}
 
         <Text className="text-primary font-bold text-lg mb-3">
-          ${item.price.toFixed(2)}
+          ₹{item.price.toFixed(2)}
         </Text>
 
         <View className="flex-row items-center justify-between">
@@ -70,7 +70,7 @@ const CartItem = ({ item }: { item: any }) => {
           </View>
 
           <Text className="text-dark-100 font-semibold">
-            ${(item.price * item.quantity).toFixed(2)}
+            ₹{(item.price * item.quantity).toFixed(2)}
           </Text>
         </View>
       </View>

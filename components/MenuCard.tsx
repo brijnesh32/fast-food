@@ -85,7 +85,7 @@ const MenuCard = ({ item }: { item: MenuItem }) => {
 
       {/* Price */}
       <Text className="text-gray-200 mb-3">
-        ${item.price?.toFixed(2) || "0.00"}
+        ₹{item.price?.toFixed(2) || "0.00"}
       </Text>
 
       {/* Add to Cart Button */}
