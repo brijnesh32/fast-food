@@ -1,8 +1,8 @@
-// app/(tabs)/order-history.tsx – Improved UI/UX
+// app/(tabs)/order-history.tsx – Fixed price display
 import CustomHeader from "@/components/CustomHeader";
 import { getMyOrders } from "@/lib/api";
 import useAuthStore from "@/store/auth.store";
-import { Feather } from "@expo/vector-icons"; // Ensure you have this installed
+import { Feather } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -81,8 +81,18 @@ const OrderHistory = () => {
             minute: "2-digit",
           }),
           deliveryOption: order.delivery_option || "delivery",
-          totalAmount: order.total_amount || 0,
-          items: order.items || [],
+          // ✅ FIX: Ensure price is treated as number and properly formatted
+          totalAmount:
+            typeof order.total_amount === "number"
+              ? order.total_amount
+              : parseFloat(order.total_amount) || 0,
+          items: (order.items || []).map((item: any) => ({
+            ...item,
+            price:
+              typeof item.price === "number"
+                ? item.price
+                : parseFloat(item.price) || 0,
+          })),
           restaurantName: order.restaurant_name || "Restaurant",
           rating: order.rating || null,
           delivery_address: order.delivery_address,
@@ -127,7 +137,11 @@ const OrderHistory = () => {
     ["delivered", "completed", "cancelled"].includes(order.status),
   );
 
-  const formatPrice = (price: number) => `₹${(price || 0).toFixed(2)}`;
+  // ✅ FIX: Ensure price is properly formatted
+  const formatPrice = (price: number | string) => {
+    const numPrice = typeof price === "string" ? parseFloat(price) : price;
+    return isNaN(numPrice) ? "₹0.00" : `₹${numPrice.toFixed(2)}`;
+  };
 
   const getStatusColor = (status: OrderStatus) => {
     const colors = {
